@@ -1,0 +1,7 @@
+megs: 32
+#romimage: file=/usr/local/bochs/1.4.1/BIOS-bochs-latest, address=0xf0000
+#vgaromimage: /usr/local/bochs/1.4.1/VGABIOS-elpin-2.40
+floppya: 1_44=boot.bin, status=inserted
+boot: a
+log: bochsout.txt
+mouse: enabled=0 
