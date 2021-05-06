@@ -8,3 +8,11 @@
     pop     %bp
     ret
 .endm
+
+#! da sistemare il cursore
+.macro print_prompt
+    push    %bx
+    mov     $string, %bx
+    call    puts
+    pop     %bx
+.endm

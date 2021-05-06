@@ -8,8 +8,13 @@ init:
     mov     %ax, %ds
     ljmp    $0, $_start
 _start:
-    call clear
-    call read
+# Clear the screen changing the video mode
+    call    clear
+# Stampa il prompt butos a schermo
+# Buggato, al momento della cancellazione muore tutto e viene cancellata la prima lettera
+    # print_prompt
+# Legge comandi
+    call    read
 end:
     nop
     nop
@@ -23,8 +28,3 @@ end:
     .include    "write.s"
     .include    "read.s"
 
-string:
-    .ascii  "Lanfredi gay"
-    .byte   0x0a, 0x0d, 0x00
-len:
-    .byte   (.-string)
