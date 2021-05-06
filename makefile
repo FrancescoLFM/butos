@@ -7,7 +7,7 @@ OBJ=init.o
 ENTRY=init
 
 .PHONY=all
-all: $(TARGET)
+all: clean $(TARGET)
 
 %.o: %.s
 	$(AS) $< -o $@
@@ -18,3 +18,7 @@ $(TARGET): $(OBJ)
 .PHONY=clean
 clean:
 	rm *.o $(TARGET)
+
+.PHONY=test
+test:
+	qemu-system-x86_64 $(TARGET)
