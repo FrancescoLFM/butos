@@ -1,24 +1,29 @@
-AS=as
-LD=ld
-LDARGS=-Tboot.ld --oformat binary
+NAME	= boot
 
-TARGET=boot.bin
-OBJ=init.o
-ENTRY=init
+AS		= as
+LD		= ld
+LDSCR	= $(NAME).ld
+
+TARGET	= $(NAME).bin
+OBJ		= init.o write.o read.o
+ENTRY	= init
 
 .PHONY=all
-all: clean $(TARGET)
+all: $(TARGET)
 
 %.o: %.s
 	$(AS) $< -o $@
 
 $(TARGET): $(OBJ)
-	$(LD) $(LDARGS) -e $(ENTRY) $^ -o $@
+	$(LD) -T $(LDSCR) $^ -o $(NAME).out
+	strip --remove-section=.note.gnu.property $(NAME).out
+	objcopy -O binary -S $(NAME).out $@
+	rm $(NAME).out
 
 .PHONY=clean
 clean:
 	rm *.o $(TARGET)
 
-.PHONY=test
-test:
+.PHONY=run
+run:
 	qemu-system-x86_64 $(TARGET)

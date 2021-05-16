@@ -1,4 +1,5 @@
     .code16
+    .include "macro.s"
 
     .text
 
@@ -36,6 +37,7 @@ puts_exit:
     popa 
 end_f
 
+    .global htos
 # dx = Number to convert
 htos:
 start_f
@@ -59,6 +61,7 @@ start_f
     popa
 end_f
 
+    .global printh
 # dx = Number to convert
 printh:
 start_f

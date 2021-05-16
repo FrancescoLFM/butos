@@ -1,21 +1,15 @@
     .code16
+    .include "macro.s"
 
     .equ    screen_size, 0x1950
+    .equ    last_column, 0x4f
 
     .text
 
     .global read
-
-.equ    set_cursor, 0x02
-.equ    teletype, 0x0E
-
-.equ    video_int, 0x10
-.equ    kb_int, 0x16
-
 read:
 start_f
     pusha
-    xor     %cx, %cx
 read_loop:
     xor     %ah, %ah
     int     $kb_int
@@ -31,9 +25,10 @@ read_loop:
 delete:
     cmp     $0x0E08, %ax
     jne     read_L0
+    
     call    del_char
-
-    jmp     read_continue
+    dec     %bx
+    jmp     1f
 
     # Enter
 read_L0:
@@ -41,23 +36,32 @@ read_L0:
     jne     read_L1
     
     call    newline
+    jmp     read_exit
 
 read_L1:
     cmp     $0x4B00, %ax
     jne     read_L2
 
     call    move_cursor_left
+    dec     %bx
+    jmp     1f
 
 read_L2:
     cmp     $0x4D00, %ax
     jne     read_continue
 
     call    move_cursor_right
+    jmp     read_continue
 
 read_continue:
-    inc     %cx
-    or      %ax, %ax
-    jnz     read_loop
+    inc     %bx
+1:
+    mov     %al, (%bx)
+    jmp     read_loop
+
+read_exit:
+    inc     %bx
+    movb     $0x00, (%bx)
 
     popa
 end_f
@@ -105,14 +109,21 @@ start_f
 
     xor     %al, %al
 
-    cmp     $0x50, %dl  # forse 0x50
+    cmp     $last_column, %dl
     jne     1f
-    
-    test    %dl, %dl     # set zero flag
-    jmp     2f
+
+    # Check if last column of last row
+    cmp     $0x19, %dh
+    jl      0f      
+
+    mov     $0xff, %dl
+    jmp     1f
+
+0:
+    mov     $0x01, %al
 
 1:
-    test    %al, %al
+    test    %al, %al    # set zero flag
     jmp     2f
 2:
     pop    %ax
@@ -132,7 +143,7 @@ start_f
     pop     %cx
 end_f
 
-
+    .global clear
 clear:
 start_f
     pusha
@@ -183,7 +194,7 @@ start_f
     # first column
     mov     $0x02, %ah
     dec     %dh
-    mov     $0x50, %dl
+    mov     $last_column, %dl
 
 2:
     int     $video_int

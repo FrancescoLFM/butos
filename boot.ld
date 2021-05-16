@@ -1,13 +1,17 @@
 ENTRY(init);
 SECTIONS
 {
-    . = 0x7C00;
-    .text : AT(0x7C00)
+    . = 0x7c00;
+    .text 0x7c00 :
     {
         *(.text);
     }
-    .sig : AT(0x7DFE)
+    .sig 0x7dfe :
     {
         SHORT(0xaa55);
+    }
+    .note.gnu.property : AT (ADDR(.sig) + SIZEOF(.sig))
+    {
+        *(.note.gnu.property);
     }
 }
