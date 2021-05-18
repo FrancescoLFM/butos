@@ -1,11 +1,13 @@
-     .code16
+    .code16
     .text
     .include    "macro.s"
     
     .global init
 init:
+    mov     %dl, (drive_number)
     xor     %ax, %ax
     mov     %ax, %ds
+    mov     %ax, %es
     ljmp    $0, $_start
 _start:
     call    clear
@@ -16,11 +18,17 @@ _start:
     xor     %bx, %bx
     int     $video_int
 
-    call    read
+    mov     $0x0002, %cx
+    xor     %dh, %dh
+    mov     $0x7e00, %bx
+    call    read_sector
+
+    call    puts
+
 end:
     hlt
     jmp     end 
 
-#    .include    "write.s"
-#    .include    "read.s"
-
+    .global drive_number
+drive_number:
+    .byte   0x00

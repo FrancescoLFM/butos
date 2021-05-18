@@ -2,6 +2,7 @@
 .equ    teletype, 0x0E
 
 .equ    video_int, 0x10
+.equ    disk_int, 0x13
 .equ    kb_int, 0x16
 
 .macro start_f

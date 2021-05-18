@@ -7,6 +7,7 @@
     .text
 
     .global read
+# bx: address of memory where to start storing the string
 read:
 start_f
     pusha
@@ -28,6 +29,7 @@ delete:
     
     call    del_char
     dec     %bx
+    movb    $0x00, (%bx)
     jmp     1f
 
     # Enter
@@ -51,17 +53,18 @@ read_L2:
     jne     read_continue
 
     call    move_cursor_right
-    jmp     read_continue
+    inc     %bx
+    jmp     1f
 
 read_continue:
+    mov     %al, (%bx)
     inc     %bx
 1:
-    mov     %al, (%bx)
     jmp     read_loop
 
 read_exit:
     inc     %bx
-    movb     $0x00, (%bx)
+    movb    $0x00, (%bx)
 
     popa
 end_f
@@ -135,12 +138,13 @@ end_f
 # Probabile broken muovendo cx
 del_char:
 start_f
-    push    %cx
-    mov     $0x0A, %ah
+    pusha
+    mov     $0x0a, %ah
     mov     $0x20, %al
+    xor     %bx, %bx
     mov     $1, %cx
     int     $video_int
-    pop     %cx
+    popa
 end_f
 
     .global clear
@@ -211,6 +215,7 @@ move_cursor_right:
 start_f
     pusha
 
+    xor     %bh, %bh
     call    is_last_column
     jz      1f
 
