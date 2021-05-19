@@ -18,7 +18,7 @@ $(TARGET): $(OBJ)
 	$(LD) -T $(LDSCR) $^ -o $(NAME).out
 	strip --remove-section=.note.gnu.property $(NAME).out
 	objcopy -O binary -S $(NAME).out $@
-	dd seek=1 bs=512 count=1 if=/dev/zero of=$(NAME).bin
+	dd seek=1 bs=512 count=1 if=sector2.img of=$(NAME).bin
 	rm $(NAME).out
 
 .PHONY=clean

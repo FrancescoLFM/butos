@@ -4,7 +4,7 @@
     
     .global init
 init:
-    mov     %dl, (drive_number)
+    movb    $0x00, (drive_number)
     xor     %ax, %ax
     mov     %ax, %ds
     mov     %ax, %es
