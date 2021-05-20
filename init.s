@@ -4,12 +4,12 @@
     
     .global init
 init:
-    movb    $0x00, (drive_number)
     xor     %ax, %ax
     mov     %ax, %ds
     mov     %ax, %es
     ljmp    $0, $_start
 _start:
+    movb    %dl, (drive_number)
     call    clear
 
     mov     $set_cursor, %ah
