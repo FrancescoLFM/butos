@@ -1,5 +1,9 @@
+# Code by Giovanni Zaccaria
+# Copyright 2021
+# This product is under MIT License
+
     .code16
-    .include "macro.s"
+    .include "../macro.s"
 
     .text
 

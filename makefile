@@ -1,30 +1,14 @@
-NAME	= boot
-
-AS		= as
-LD		= ld
-LDSCR	= $(NAME).ld
-
-TARGET	= $(NAME).bin
-OBJ		= init.o write.o read.o diskout.o
-ENTRY	= init
+DD		= dd
+IF  	= programs/read.bin
+TARGET	= boot
 
 .PHONY=all
 all: $(TARGET)
-
-%.o: %.s
-	$(AS) $< -o $@
-
-$(TARGET): $(OBJ)
-	$(LD) -T $(LDSCR) $^ -o $(NAME).out
-	strip --remove-section=.note.gnu.property $(NAME).out
-	objcopy -O binary -S $(NAME).out $@
-	dd seek=1 bs=512 count=1 if=sector2.img of=$(NAME).bin
-	rm $(NAME).out
-
-.PHONY=clean
-clean:
-	rm *.o $(TARGET)
+$(TARGET): $(IF)
+	make -C init/
+	make -C programs/
+	$(DD) seek=1 bs=512 count=1 if=$(IF) of=$(TARGET).bin
 
 .PHONY=run
 run:
-	qemu-system-x86_64 $(TARGET)
+	qemu-system-x86_64 $(TARGET).bin

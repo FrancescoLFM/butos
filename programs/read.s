@@ -1,9 +1,9 @@
+# Code by Francesco Pallara and Giovanni Zaccaria
+# 2021 Copyright
+# MIT License, all details on github page
+
     .code16
-    .include "macro.s"
-
-    .equ    screen_size, 0x1950
-    .equ    last_column, 0x4f
-
+    .include "../macro.s"
     .text
 
     .global read
@@ -11,11 +11,16 @@
 read:
 start_f
     pusha
+    xor     %bx, %bx
+    xor     %cx, %cx
+    xor     %dx, %dx
 read_loop:
+    # INT 16,0   Wait for keystroke and read
     xor     %ah, %ah
     int     $kb_int
 
-    cmp     $0x07, %al  # Ascii control
+    # Ascii control
+    cmp     $0x07, %al 
     jle     delete
 
     push    %ax
@@ -147,25 +152,6 @@ start_f
     popa
 end_f
 
-    .global clear
-clear:
-start_f
-    pusha
-
-    mov     $0x07, %ah
-    mov     $0x0F, %bh
-    mov     $screen_size, %dx
-    xor     %cx, %cx
-    int     $video_int
-    
-    mov     $0x02, %ah
-    xor     %dx, %dx
-    xor     %bh, %bh
-    int     $video_int
-
-    popa
-end_f
-
 newline:
 start_f
     pusha
@@ -204,12 +190,6 @@ start_f
     int     $video_int
     popa
 end_f
-
-get_cursor_position:
-    mov     $0x03, %ah
-    xor     %bh, %bh
-    int     $video_int
-    ret
 
 move_cursor_right:
 start_f

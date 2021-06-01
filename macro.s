@@ -1,3 +1,8 @@
+.code16
+
+.equ    screen_size, 0x1950
+.equ    last_column, 0x4f
+
 .equ    set_cursor, 0x02
 .equ    teletype, 0x0E
 
@@ -16,10 +21,3 @@
     ret
 .endm
 
-#! da sistemare il cursore
-.macro print_prompt
-    push    %bx
-    mov     $string, %bx
-    call    puts
-    pop     %bx
-.endm

@@ -1,7 +1,7 @@
     .code16
     .text
-    .include    "macro.s"
-    
+    .include    "../macro.s"
+
     .global init
 init:
     xor     %ax, %ax
@@ -9,8 +9,9 @@ init:
     mov     %ax, %es
     ljmp    $0, $_start
 _start:
-    movb    %dl, (drive_number)
     call    clear
+
+    movb    %dl, (drive_number)
 
     mov     $set_cursor, %ah
     xor     %dl, %dl
@@ -23,7 +24,7 @@ _start:
     mov     $0x7e00, %bx
     call    read_sector
 
-    call    puts
+    jmp     %bx
 
 end:
     hlt
