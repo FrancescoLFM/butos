@@ -2,6 +2,7 @@
 .include "../macro.s"
 
 .global clear
+.global get_cursor_position
 
 get_cursor_position:
     mov     $0x03, %ah
