@@ -31,4 +31,4 @@ run: $(TARGET)
 
 .PHONY=clean
 clean:
-	rm *.o $(TARGET)
+	rm $(OBJ) $(TARGET)

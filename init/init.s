@@ -28,7 +28,7 @@ _start:
 
 end:
     hlt
-    jmp     end 
+    jmp     end
 
     .global drive_number
 drive_number:
