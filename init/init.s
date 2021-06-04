@@ -9,8 +9,9 @@ init:
     mov     %ax, %es
     ljmp    $0, $_start
 _start:
-    call    clear
-
+    mov     $start_string, %bx
+    call    puts
+    
     movb    %dl, (drive_number)
 
     mov     $set_cursor, %ah
@@ -24,11 +25,15 @@ _start:
     mov     $0x7e00, %bx
     call    read_sector
 
+    call    clear
     jmp     %bx
 
 end:
     hlt
     jmp     end 
+
+start_string:
+    .ascii "Butos is starting..."
 
     .global drive_number
 drive_number:

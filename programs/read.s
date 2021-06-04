@@ -11,7 +11,7 @@
 read:
 start_f
     pusha
-    xor     %bx, %bx
+    mov     $8000, %bx
     xor     %cx, %cx
     xor     %dx, %dx
 read_loop:
