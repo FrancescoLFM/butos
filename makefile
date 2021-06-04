@@ -1,14 +1,17 @@
 DD		= dd
-IF  	= programs/read.bin
-TARGET	= boot
+IF  	= 
+TARGET	= boot.bin
 
 .PHONY=all
 all: $(TARGET)
-$(TARGET): init/makefile programs/makefile
+$(TARGET): $(IF)
 	make -C init/
-	make -C programs/
-	$(DD) seek=1 bs=512 count=1 if=$(IF) of=$(TARGET).bin
+	$(DD) seek=1 bs=512 count=1 conv=notrunc if=$^ of=$@
+
+.PHONY=clean
+clean:
+	rm *.bin
 
 .PHONY=run
 run:
-	qemu-system-x86_64 $(TARGET).bin
+	qemu-system-x86_64 $(TARGET)
