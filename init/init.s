@@ -9,31 +9,20 @@ init:
     mov     %ax, %es
     ljmp    $0, $_start
 _start:
-    mov     $start_string, %bx
-    call    puts
-    
     movb    %dl, (drive_number)
 
-    mov     $set_cursor, %ah
-    xor     %dl, %dl
-    xor     %dh, %dh
-    xor     %bx, %bx
-    int     $video_int
+    call    clear
 
     mov     $0x0002, %cx
     xor     %dh, %dh
     mov     $0x7e00, %bx
     call    read_sector
 
-    call    clear
-    jmp     %bx
+    jmp     *%bx
 
 end:
     hlt
-    jmp     end 
-
-start_string:
-    .ascii "Butos is starting..."
+    jmp     end
 
     .global drive_number
 drive_number:
