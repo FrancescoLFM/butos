@@ -9,15 +9,9 @@ init:
     mov     %ax, %es
     ljmp    $0, $_start
 _start:
-    call    clear
-
     movb    %dl, (drive_number)
 
-    mov     $set_cursor, %ah
-    xor     %dl, %dl
-    xor     %dh, %dh
-    xor     %bx, %bx
-    int     $video_int
+    call    clear
 
     mov     $0x0002, %cx
     xor     %dh, %dh
