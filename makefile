@@ -7,7 +7,7 @@ all: $(TARGET)
 
 $(TARGET): $(IF)
 	$(DD) seek=0 bs=512 count=1 conv=notrunc if=init/boot.bin of=$@
-	$(DD) seek=1 bs=512 count=1 conv=notrunc if=programs/lanfredi.bin of=$@
+	$(DD) seek=1 bs=512 conv=notrunc if=programs/lanfredi.bin of=$@
 
 $(IF): init/makefile programs/makefile
 	make -C init/

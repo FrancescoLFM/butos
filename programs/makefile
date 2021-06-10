@@ -2,7 +2,7 @@ CC		= gcc
 CFLAGS	= -ffreestanding -m32 -Wall -Wextra -fno-pie
 LD		= ld
 
-OBJ		= main.o
+OBJ		= main.o asm.o vga.o
 NAME	= lanfredi
 TARGET	= $(NAME).bin
 SCRIPT	= $(NAME).ld
@@ -18,7 +18,7 @@ $(NAME).out: $(OBJ)
 
 $(TARGET): $(NAME).out
 	objcopy	-O binary -S $^ $@
-	dd of=$@ bs=1 seek=510 count=2 conv=notrunc if=/dev/zero
+	./configure.sh $@
 	rm $^
 
 .PHONY=clean
