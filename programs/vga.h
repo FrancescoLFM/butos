@@ -39,6 +39,7 @@ void print_pm(int color, char* string);
 
 /* Cursor */
 
+// default (13, 14)
 void enable_cursor(uint8_t cursor_start, uint8_t cursor_end);
 
 void disable_cursor();
