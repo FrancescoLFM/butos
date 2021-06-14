@@ -1,38 +1,40 @@
-volatile char* cursor = (volatile char*)0xb8000;
+#include "vga.h"
+#include "asm.h"
 
-void print_pm(int color, char* string);
+char hexstring[9] = {0};
+
+volatile char* cursor = (volatile char*)0xb8000;
 
 char* carriage_return(char volatile* cursor);
 
-void main()
+char* htos(uint32_t hex, uint8_t size);
+
+void _start()
 {
-    for (int i = 0; i < 25; i++)
-        print_pm(0b00000111, "Lanfredi gay, ma a 32 bit\n\r");
-    for(;;);
+    disable_cursor();
+    print_pm(WHITE_ON_BLACK, "esp: 0x");
+    
+    uint32_t esp;
+    asm volatile ("mov %%esp, %%eax"
+                 : "=a" (esp));
+                
+
+    print_pm(WHITE_ON_BLACK, htos(esp, 32));
+    
+    stop();
 }
 
-void print_pm(int color, char* string)
+char* htos(uint32_t hex, uint8_t size)
 {
-    do {
-        switch (*string) {
-        case '\n':
-            cursor += 160;
-            break;
-        
-        case '\r':
-            cursor = carriage_return(cursor);
-            break;
-        
-        default:
-            *cursor++ = *string;
-            *cursor++ = color;
-        }
-    } while (*string++);
-}
+    char* digits = "0123456789abcdef";
+    uint8_t nibbles = size >> 2;
 
-char* carriage_return(char volatile* cursor)
-{
-    unsigned long temp = (unsigned long)(cursor) - 0xb8000;
-    temp -= temp % 160;
-    return (char*)(temp + 0xb8000) - 2;
+    for (int i = 0; i < nibbles; i++) {
+        hexstring[nibbles - (i + 1)] = digits[hex & 0x0F];
+        hex >>= 4;
+    }
+
+    hexstring[nibbles] = 0;
+
+    return hexstring;
 }

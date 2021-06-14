@@ -11,6 +11,7 @@
 # ch: cylinder (0)
 # dh: head     (0)
 # cl: sector   (1)
+# al: number of sectors to read
     .global read_sector
 read_sector:
 start_f
@@ -19,7 +20,7 @@ start_f
     mov     $0x03, %si
 
 1:
-    mov     $0x0201, %ax
+    mov     $0x02, %ah
     int     $disk_int
     jnc     end
 
@@ -32,6 +33,10 @@ start_f
 2:
     movzx   %ah, %dx
     call    printh
+3:
+    hlt
+    jmp     3b
+
 end:
     popa
 end_f

@@ -14,7 +14,7 @@ clear:
 start_f
     pusha
 
-    mov     $0x07, %ah
+    mov     $0x0600, %ax
     mov     $0x0F, %bh
     mov     $screen_size, %dx
     xor     %cx, %cx
