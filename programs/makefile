@@ -1,8 +1,9 @@
 CC		= gcc
-CFLAGS	= -ffreestanding -m32 -Wall -Wextra -fno-pie
+CFLAGS	= -ffreestanding -m32 -Wall -Wextra -fno-pie -I../clibs/
 LD		= ld
 
-OBJ		= main.o asm.o vga.o
+LIBDIR	= ../clibs
+OBJ		= main.o $(LIBDIR)/vga.o $(LIBDIR)/asm.o
 NAME	= lanfredi
 TARGET	= $(NAME).bin
 SCRIPT	= $(NAME).ld

@@ -19,7 +19,7 @@ _start:
     movb    %dl, (drive_number)
 
     mov     $0x0002, %cx
-    mov     $0x05, %al
+    mov     $0x0a, %al
     xor     %dh, %dh
     mov     $0xf000, %bx
     call    read_sector

@@ -1,5 +1,5 @@
-#include "vga.h"
-#include "asm.h"
+#include <vga.h>
+#include <asm.h>
 
 char hexstring[9] = {0};
 

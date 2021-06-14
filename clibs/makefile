@@ -1,8 +1,10 @@
 CC 		= gcc
-CFLAGS	= -g -ffreestanding -Wall
+CFLAGS	= -g -ffreestanding -m32 -Wall -Wextra -fno-pie
 
-NAME 	= test
-OBJ 	= string.o
+OBJ 	= string.o asm.o vga.o
+
+.PHONY=all
+all: $(OBJ)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $<
