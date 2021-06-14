@@ -48,7 +48,7 @@ struct vga_char* dec_vga_pointer(uint16_t pos)
 
 void print_pm(int color, char* string)
 {
-    do {
+    while (*string) {
         switch (*string) {
         case '\n':
             vga_newline();
@@ -59,11 +59,11 @@ void print_pm(int color, char* string)
             break;
         
         default:
-            vga_pointer->ascii = *string;
+            vga_pointer->ascii = *string++;
             vga_pointer->color = color;
             inc_vga_pointer(1);
         }
-    } while (*string++);
+    };
 }
 
 #include "asm.h"

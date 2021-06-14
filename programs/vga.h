@@ -9,6 +9,8 @@
 #define VGA_WIDTH       VGA_COLS
 #define VGA_ROWS        25
 
+#define WHITE_ON_BLACK  0b00000111
+
 struct vga_char {
     char    ascii;
     uint8_t color;
