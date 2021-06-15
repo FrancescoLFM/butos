@@ -51,6 +51,8 @@ _start:
 init_protected:
     mov     $0x10, %ax
     mov     %ax, %ds
+    mov     %ax, %es
+    mov     %ax, %fs
     
     jmp     0xf000
 
