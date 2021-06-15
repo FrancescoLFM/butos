@@ -33,9 +33,9 @@ _start:
     #call    enable_a20
 
     inb	    $0x92
-	andb	$(~0x03), %al
-	orb	    $0x02, %al
-	outb	$0x92
+    andb    $(~0x03), %al
+    orb	    $0x02, %al
+    outb    $0x92
 
     cli
     lgdt    gdt_descriptor
