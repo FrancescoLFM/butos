@@ -16,6 +16,7 @@
 read_sector:
 start_f
     pusha
+    push    %ax
     mov     (drive_number), %dl
     mov     $0x03, %si
 
@@ -38,5 +39,8 @@ start_f
     jmp     3b
 
 end:
+    pop     %dx
+    cmp     %dl, %al
+    jne     2b
     popa
 end_f

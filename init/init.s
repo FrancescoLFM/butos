@@ -19,7 +19,7 @@ _start:
     movb    %dl, (drive_number)
 
     mov     $0x0002, %cx
-    mov     $0x0a, %al
+    mov     (num_sectors), %al
     xor     %dh, %dh
     mov     $0xf000, %bx
     call    read_sector
@@ -27,14 +27,19 @@ _start:
     call    clear
 
 # Enabling A20 Line
-    # mov     $0x2401, %ax
-    # int     $0x15
+    #mov     $0x2401, %ax
+    #int     $0x15
 
-    call    enable_a20
+    #call    enable_a20
+
+    inb	    $0x92
+	andb	$(~0x03), %al
+	orb	    $0x02, %al
+	outb	$0x92
 
     cli
-    # Pay attention to complete the code segment in gdt!
     lgdt    gdt_descriptor
+
     # Let's go in 32 bits protected mode
     mov     %cr0, %eax
     or      $0x01, %al
@@ -49,6 +54,11 @@ init_protected:
     
     jmp     0xf000
 
+    .data
+
     .global drive_number
 drive_number:
     .byte   0x00
+
+num_sectors:
+    .byte   0x07
