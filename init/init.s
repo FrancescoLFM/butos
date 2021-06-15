@@ -61,4 +61,4 @@ drive_number:
     .byte   0x00
 
 num_sectors:
-    .byte   0x07
+    .byte   0x06

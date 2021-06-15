@@ -1,9 +1,9 @@
 CC		= gcc
-CFLAGS	= -ffreestanding -m32 -Wall -Wextra -fno-pie -fno-stack-protector -I../clibs/
+CFLAGS	= -ffreestanding -m32 -Wall -Wextra -Werror -fno-pie -fno-stack-protector -I../clibs/
 LD		= ld
 
 LIBDIR	= ../clibs
-OBJ		= prova.o $(LIBDIR)/vga.o $(LIBDIR)/asm.o $(LIBDIR)/string.o
+OBJ		= prova.o $(LIBDIR)/vga.o $(LIBDIR)/string.o
 NAME	= lanfredi
 TARGET	= $(NAME).bin
 SCRIPT	= $(NAME).ld

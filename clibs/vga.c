@@ -1,4 +1,5 @@
 #include "vga.h"
+#include "asm.h"
 
 static struct vga_char *vga_pointer = VGA_TEXT_START;
 
@@ -65,10 +66,8 @@ void print_pm(int color, char* string)
             vga_pointer->color = color;
             inc_vga_pointer(1);
         }
-    };
+    }
 }
-
-#include "asm.h"
 
 void disable_cursor()
 {

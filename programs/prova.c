@@ -10,7 +10,6 @@ uint8_t test_a20();
 
 void _start()
 {
-    char numero[9];
     uint8_t test = test_a20();
     puts((test) ? "a20 line enabled" : "a20 line disabled");
     stop();
