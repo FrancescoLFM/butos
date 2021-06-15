@@ -35,7 +35,7 @@ struct vga_char* vga_allign_left()
     
     temp = ((uint32_t)(vga_pointer) - 0xb8000);
     temp -= temp % (VGA_COLS * sizeof(struct vga_char));
-    vga_pointer = (struct vga_char*)((temp) + 0xb8000 - 2);
+    vga_pointer = (struct vga_char*)((temp) + 0xb8000);
     
     return vga_pointer;
 }
@@ -52,10 +52,12 @@ void print_pm(int color, char* string)
         switch (*string) {
         case '\n':
             vga_newline();
+            string++;
             break;
         
         case '\r':
             vga_allign_left();
+            string++;
             break;
         
         default:

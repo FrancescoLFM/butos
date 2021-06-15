@@ -25,10 +25,12 @@ void *memccpy(void *to, const void *from, int c, int n)
 
 int strcmp(const char *str1, const char *str2) // testato, funziona
 {
-    for(int i = 0; str1[i] && str2[i]; i++)
+    int i;
+    for(i = 0; str1[i] && str2[i]; i++)
         if(str1[i] != str2[i]) 
             return 1;
-    return 0;
+    
+    return (str1[i] != str2[i]);
 }
 
 int strncmp(const char *str1, const char *str2, size_t n) // testato, funziona

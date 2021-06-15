@@ -7,7 +7,7 @@ LDSCR	= $(NAME).ld
 HOME	= ..
 TARGET	= $(NAME).bin
 LIBDIR	= $(HOME)/libs
-OBJ		= init.o gdt.o $(LIBDIR)/write.o $(LIBDIR)/diskout.o $(LIBDIR)/bioslib.o
+OBJ		= init.o gdt.o a20.o $(LIBDIR)/write.o $(LIBDIR)/diskout.o $(LIBDIR)/bioslib.o
 ENTRY	= init
 
 .PHONY=all

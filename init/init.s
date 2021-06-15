@@ -26,9 +26,11 @@ _start:
 
     call    clear
 
-    # Enabling A20 Line
-    mov     $0x2401, %ax
-    int     $0x15
+# Enabling A20 Line
+    # mov     $0x2401, %ax
+    # int     $0x15
+
+    call    enable_a20
 
     cli
     # Pay attention to complete the code segment in gdt!

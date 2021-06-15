@@ -1,9 +1,9 @@
 CC		= gcc
-CFLAGS	= -ffreestanding -m32 -Wall -Wextra -fno-pie -I../clibs/
+CFLAGS	= -ffreestanding -m32 -Wall -Wextra -fno-pie -fno-stack-protector -I../clibs/
 LD		= ld
 
 LIBDIR	= ../clibs
-OBJ		= main.o $(LIBDIR)/vga.o $(LIBDIR)/asm.o
+OBJ		= prova.o $(LIBDIR)/vga.o $(LIBDIR)/asm.o $(LIBDIR)/string.o
 NAME	= lanfredi
 TARGET	= $(NAME).bin
 SCRIPT	= $(NAME).ld
@@ -15,7 +15,7 @@ all: $(TARGET)
 	$(CC) $(CFLAGS) -c $<
 
 $(NAME).out: $(OBJ)
-	$(LD) $^ -o $@ -T $(SCRIPT) --ignore-unresolved-symbol _GLOBAL_OFFSET_TABLE_
+	$(LD) $^ -o $@ -T $(SCRIPT) --ignore-unresolved-symbol _GLOBAL_OFFSET_TABLE_ 
 
 $(TARGET): $(NAME).out
 	objcopy	-O binary -S $^ $@
