@@ -3,6 +3,7 @@
 
 static struct vga_char *vga_pointer = VGA_TEXT_START;
 
+/*
 static void* get_abs_cursor(void* base, uint8_t size, struct cursor crs, uint8_t cols)
 {
     return base + (crs.y * cols + crs.x) * size;
@@ -19,8 +20,7 @@ static void mv_vga_pointer(struct cursor crs)
     if (crs.x < VGA_COLS && crs.y < VGA_ROWS)
         vga_pointer = get_abs_cursor(VGA_TEXT_START, sizeof(struct vga_char), crs, VGA_COLS);
 }
-
-static struct vga_char* get_vga_pointer() { return vga_pointer; }
+*/
 
 static struct vga_char* inc_vga_pointer(uint16_t pos)
 {
