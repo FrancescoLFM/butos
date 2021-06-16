@@ -65,5 +65,3 @@ char *strncpy(char *to, const char *from, size_t n) // testato, funziona
 
     return to;
 }
-
-

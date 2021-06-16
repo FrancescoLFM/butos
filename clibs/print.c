@@ -44,13 +44,28 @@ static int vga_allign_left()
     return mod >> 1;
 }
 
+//! new
+static int vga_tab()
+{
+    uint32_t temp;
+    uint8_t mod;
+    
+    temp = ((uint32_t)(vga_pointer) - 0xb8000);
+    mod = temp % ((VGA_COLS >> 3) * sizeof(struct vga_char));
+    temp += 16 - mod;
+
+    vga_pointer = (struct vga_char*)((temp) + 0xb8000);
+    
+    return 8 - (mod >> 1);
+}
+
 static struct vga_char* dec_vga_pointer(uint16_t pos)
 {
     vga_pointer -= pos;
     return vga_pointer;
 }
 
-static int __putc(int color, char c) {
+static int __putc(uint8_t color, char c) {
     switch (c) {
     case '\n':
         vga_newline();
@@ -65,6 +80,9 @@ static int __putc(int color, char c) {
     case '\r':
         return -vga_allign_left();
     
+    case '\t':
+        return vga_tab();
+    
     default:
         vga_pointer->ascii = c;
         vga_pointer->color = color;
@@ -74,7 +92,7 @@ static int __putc(int color, char c) {
     return 1;
 }
 
-int print_pm(int color, char* string)
+int print_pm(uint8_t color, char* string)
 {
     int count = 0;
     int relpos = 0;

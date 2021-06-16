@@ -53,7 +53,13 @@ init_protected:
     mov     %ax, %ds
     mov     %ax, %es
     mov     %ax, %fs
+    mov     %ax, %gs
     mov     %ax, %ss
+
+    xor     %eax, %eax
+    mov     %eax, %ebx
+    mov     %eax, %ecx
+    mov     %eax, %edx
     
     jmp     0xf000
 
