@@ -10,8 +10,7 @@ uint8_t test_a20();
 
 void _start()
 {
-    uint8_t test = test_a20();
-    puts((test) ? "a20 line enabled" : "a20 line disabled");
+    puts(test_a20() ? "a20 is enabled" : "a20 is disabled");
     stop();
 }
 
@@ -22,16 +21,15 @@ void puts(char* string)
 
 uint8_t test_a20()
 {
-    uint8_t temp, ret;
-    uint8_t *mem1 = (uint8_t*)(0x112345);
-    uint8_t *mem2 = (uint8_t*)(0x012345);
+    uint8_t ret;
+    uint8_t mem1 = 0x00;
+    uint8_t *mem2 = &mem1;
 
-    temp = *mem1;
+    mem2 = (uint8_t*)((uint32_t)(&mem1) ^ 0x100000);
 
-    *mem1 = ~(*mem2);
-    ret = (*mem1 != *mem2);
+    mem1 = ~(*mem2);
+    ret = (mem1 != *mem2);
 
-    *mem1 = temp;
     return ret;
 }
 
