@@ -1,6 +1,9 @@
 NAME	= boot
 
 AS		= as
+
+SECTORS = $(shell ../programs/configure.sh ../programs/lanfredi.bin)
+ASFLAGS	= --defsym SEC=$(SECTORS)
 LD		= ld
 LDSCR	= $(NAME).ld
 
@@ -14,7 +17,7 @@ ENTRY	= init
 all: $(TARGET)
 
 %.o: %.s
-	$(AS) $< -o $@
+	$(AS) $(ASFLAGS) $< -o $@
 
 $(NAME).out: $(OBJ)
 	$(LD) -T $(LDSCR) $^ -o $@

@@ -10,9 +10,9 @@ $(TARGET): $(IF)
 	$(DD) seek=1 bs=512 conv=notrunc if=programs/lanfredi.bin of=$@
 
 $(IF): init/makefile programs/makefile clibs/makefile
-	make -C init/
 	make -C clibs/
 	make -C programs/
+	make -C init/
 
 .PHONY=clean
 clean:

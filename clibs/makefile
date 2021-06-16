@@ -1,7 +1,7 @@
 CC 		= gcc
 CFLAGS	= -g -ffreestanding -m32 -Wall -Wextra -fno-pie
 
-OBJ 	= string.o vga.o
+OBJ 	= string.o print.o
 
 .PHONY=all
 all: $(OBJ)
