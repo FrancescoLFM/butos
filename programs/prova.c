@@ -8,15 +8,17 @@ char* htos(char* buffer, uint32_t hex, uint8_t size);
 
 uint8_t test_a20();
 
+void panic();
+
 void _start()
 {
-    puts("stringa");
+    print_pm(COLOR(GREEN | RED, BLUE), "string");
     stop();
 }
 
 void puts(char* string)
 {
-    print_pm(WHITE_ON_BLACK, string);
+    print_pm(COLOR(WHITE, BLACK), string);
 }
 
 uint8_t test_a20()

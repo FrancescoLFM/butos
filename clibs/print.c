@@ -44,7 +44,6 @@ static int vga_allign_left()
     return mod >> 1;
 }
 
-//! new
 static int vga_tab()
 {
     uint32_t temp;

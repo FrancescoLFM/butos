@@ -45,6 +45,6 @@ static __attribute__((always_inline)) inline void outw(uint16_t port, uint16_t v
 
 static __attribute__((always_inline)) inline void hlt() { asm volatile ("hlt"); }
 
-static __attribute__((always_inline))  inline void stop() { for (;;) asm volatile ("hlt"); }
+static __attribute__((always_inline)) inline void stop() { for (;;) asm volatile ("hlt"); }
 
 #endif

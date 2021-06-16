@@ -10,6 +10,15 @@
 #define VGA_WIDTH       VGA_COLS
 #define VGA_ROWS        25
 
+#define BACKGROUND(col) ((col) << 4)
+#define FOREGROUND(col) (col)
+#define COLOR(fg, bg)   (FOREGROUND(fg) | BACKGROUND(bg))
+#define RED             0b100
+#define GREEN           0b010
+#define BLUE            0b001
+#define WHITE           0b111
+#define BLACK           0b000
+
 #define WHITE_ON_BLACK  0b00000111
 
 struct vga_char {
@@ -22,7 +31,7 @@ struct cursor {
     uint8_t y;
 };
 
-int print_pm(int color, char* string);
+int print_pm(uint8_t color, char* string);
 
 /* Cursor */
 
