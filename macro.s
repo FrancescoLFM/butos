@@ -15,9 +15,12 @@
     mov     %sp, %bp
 .endm
 
+# leave is equivalent to:
+#    mov     %bp, %sp
+#    pop     %bp
+
 .macro end_f
-    mov     %bp, %sp
-    pop     %bp
+    leave
     ret
 .endm
 

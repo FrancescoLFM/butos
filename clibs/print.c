@@ -1,72 +1,92 @@
-#include "vga.h"
+#include "print.h"
 #include "asm.h"
 
 static struct vga_char *vga_pointer = VGA_TEXT_START;
 
-void* get_abs_cursor(void* base, uint8_t size, struct cursor crs, uint8_t cols)
+static void* get_abs_cursor(void* base, uint8_t size, struct cursor crs, uint8_t cols)
 {
     return base + (crs.y * cols + crs.x) * size;
 }
 
-void mv_cursor(struct cursor *crs, uint8_t x, uint8_t y)
+static void mv_cursor(struct cursor *crs, uint8_t x, uint8_t y)
 {
     crs->x = x;
     crs->y = y;
 }
 
-void mv_vga_pointer(struct cursor crs)
+static void mv_vga_pointer(struct cursor crs)
 {
     if (crs.x < VGA_COLS && crs.y < VGA_ROWS)
         vga_pointer = get_abs_cursor(VGA_TEXT_START, sizeof(struct vga_char), crs, VGA_COLS);
 }
 
-struct vga_char* get_vga_pointer() { return vga_pointer; }
+static struct vga_char* get_vga_pointer() { return vga_pointer; }
 
-struct vga_char* inc_vga_pointer(uint16_t pos)
+static struct vga_char* inc_vga_pointer(uint16_t pos)
 {
     vga_pointer = &vga_pointer[pos];
     return vga_pointer;
 }
 
-struct vga_char* vga_newline() { return inc_vga_pointer(VGA_COLS); }
+static struct vga_char* vga_newline() { return inc_vga_pointer(VGA_COLS); }
 
-struct vga_char* vga_allign_left()
+static int vga_allign_left()
 {
     uint32_t temp;
+    uint8_t mod;
     
     temp = ((uint32_t)(vga_pointer) - 0xb8000);
-    temp -= temp % (VGA_COLS * sizeof(struct vga_char));
+    mod = temp % (VGA_COLS * sizeof(struct vga_char));
+    temp -= mod;
+
     vga_pointer = (struct vga_char*)((temp) + 0xb8000);
     
+    return mod >> 1;
+}
+
+static struct vga_char* dec_vga_pointer(uint16_t pos)
+{
+    vga_pointer -= pos;
     return vga_pointer;
 }
 
-struct vga_char* dec_vga_pointer(uint16_t pos)
-{
-    vga_pointer -= sizeof(struct vga_char) * pos;
-    return vga_pointer;
-}
-
-void print_pm(int color, char* string)
-{
-    while (*string) {
-        switch (*string) {
-        case '\n':
-            vga_newline();
-            string++;
-            break;
-        
-        case '\r':
-            vga_allign_left();
-            string++;
-            break;
-        
-        default:
-            vga_pointer->ascii = *string++;
-            vga_pointer->color = color;
-            inc_vga_pointer(1);
-        }
+static int __putc(int color, char c) {
+    switch (c) {
+    case '\n':
+        vga_newline();
+        return VGA_COLS;
+    
+    case '\b':
+        dec_vga_pointer(1);
+        vga_pointer->ascii = ' ';
+        vga_pointer->color = color;
+        return -1;
+    
+    case '\r':
+        return -vga_allign_left();
+    
+    default:
+        vga_pointer->ascii = c;
+        vga_pointer->color = color;
+        inc_vga_pointer(1);
     }
+
+    return 1;
+}
+
+int print_pm(int color, char* string)
+{
+    int count = 0;
+    int relpos = 0;
+
+    while (*string) {
+        relpos += __putc(color, *string++);
+        count++;
+    }
+
+    inc_cursor(relpos);
+
+    return count;
 }
 
 void disable_cursor()
@@ -87,7 +107,7 @@ void enable_cursor(uint8_t cursor_start, uint8_t cursor_end)
 	outb(0x3D5, (inb(0x3D5) & 0xE0) | cursor_end);
 }
 
-void __update_cursor(uint16_t pos)
+static void __update_cursor(uint16_t pos)
 {
     outb(0x3D4, 0x0F);
 	outb(0x3D5, (uint8_t) (pos & 0xFF));
@@ -101,7 +121,7 @@ void update_cursor(const struct cursor crs)
 	__update_cursor(pos);
 }
 
-uint16_t __get_cursor_position()
+static uint16_t __get_cursor_position()
 {
     uint16_t pos = 0;
 

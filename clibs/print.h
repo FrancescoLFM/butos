@@ -2,6 +2,7 @@
 #define VGA_H
 
 #include <stdint.h>
+#include "def.h"
 
 #define VGA_TEXT_START  ((void*)(0xb8000))
 #define VGA_TEXT_END    ((void*)(0xb9f40))
@@ -21,23 +22,7 @@ struct cursor {
     uint8_t y;
 };
 
-void* get_abs_cursor(void* base, uint8_t size, struct cursor crs, uint8_t cols);
-
-void mv_cursor(struct cursor *crs, uint8_t x, uint8_t y);
-
-void mv_vga_pointer(struct cursor crs);
-
-struct vga_char* get_vga_pointer();
-
-struct vga_char* inc_vga_pointer(uint16_t pos);
-
-struct vga_char* dec_vga_pointer(uint16_t pos);
-
-struct vga_char* vga_allign_left();
-
-struct vga_char* vga_newline();
-
-void print_pm(int color, char* string);
+int print_pm(int color, char* string);
 
 /* Cursor */
 

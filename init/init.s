@@ -53,6 +53,7 @@ init_protected:
     mov     %ax, %ds
     mov     %ax, %es
     mov     %ax, %fs
+    mov     %ax, %ss
     
     jmp     0xf000
 
@@ -63,4 +64,4 @@ drive_number:
     .byte   0x00
 
 num_sectors:
-    .byte   0x06
+    .byte   SEC

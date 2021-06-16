@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 
+#define IN
+#define OUT
+
 #define NULL    ((void*)(0))
 
 typedef unsigned long int size_t;

@@ -1,5 +1,5 @@
 #include "../clibs/string.h"
-#include <vga.h>
+#include <print.h>
 #include <asm.h>
 
 void puts(char* string);
@@ -10,7 +10,7 @@ uint8_t test_a20();
 
 void _start()
 {
-    puts(test_a20() ? "a20 is enabled" : "a20 is disabled");
+    puts("stringa");
     stop();
 }
 
