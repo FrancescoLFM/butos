@@ -3,9 +3,9 @@
 #ifndef STRING_H
 #define STRING_H
 
-void *memcpy(void *to, const void *from, int n);
+void *memcpy(void *to, const void *from, size_t n);
 
-void *memccpy(void *to, const void *from, int c, int n);
+void *memccpy(void *to, const void *from, size_t c, size_t n);
 
 int strcmp(const char *from, const char *to); // compare two strings (like cmp instruction)
 /*

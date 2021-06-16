@@ -1,21 +1,18 @@
 #include "string.h"
-#include "def.h"
 
-void *memcpy(void *to, const void *from, int n)
+void *memcpy(void *to, const void *from, size_t n)
 {
-    uint8_t *cfrom = (uint8_t *)from;
-    uint8_t *cto = (uint8_t *)to;
-
-    for(int i = 0; i < n; i++)
-        cto[i] = cfrom[i];
+    asm volatile ("rep movsb"
+                 :
+                 : "D" (to), "S" (from), "c" (n));
     return to;
 }
 
-void *memccpy(void *to, const void *from, int c, int n)
+void *memccpy(void *to, const void *from, size_t c, size_t n)
 {
     uint8_t *cfrom = (uint8_t *)from;
     uint8_t *cto = (uint8_t *)to;
-    int i;
+    size_t i;
 
     for(i = 0; cfrom[i] != c && i < n; i++)
         cto[i] = cfrom[i];
