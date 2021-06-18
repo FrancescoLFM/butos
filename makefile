@@ -1,24 +1,30 @@
 DD		= dd
-IF  	= init/boot.bin programs/lanfredi.bin
+
+INITDIR	= init
+ISODIR	= src/butos
+
+INIT  	= $(INITDIR)/boot.bin
+ISO		= $(ISODIR)/butos.bin
+
 TARGET	= boot.bin
 
 .PHONY=all
 all: $(TARGET)
 
-$(TARGET): $(IF)
-	$(DD) seek=0 bs=512 count=1 conv=notrunc if=init/boot.bin of=$@
-	$(DD) seek=1 bs=512 conv=notrunc if=programs/lanfredi.bin of=$@
+$(TARGET): $(ISO) $(INIT)
+	$(DD) seek=0 bs=512 count=1 conv=notrunc if=$(INIT) of=$@
+	$(DD) seek=1 bs=512 conv=notrunc if=$(ISO) of=$@
 
-$(IF): init/makefile programs/makefile clibs/makefile
-	make -C clibs/
-	make -C programs/
-	make -C init/
+$(INIT):
+	make -C $(INITDIR)
+
+$(ISO):
+	make -C $(ISODIR)
 
 .PHONY=clean
 clean:
-	make -C init/ clean
-	make -C clibs/ clean
-	make -C programs/ clean
+	make -C $(INITDIR) clean
+	make -C $(ISODIR) clean
 	rm *.bin
 
 .PHONY=run

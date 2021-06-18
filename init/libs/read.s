@@ -3,7 +3,7 @@
 # MIT License, all details on github page
 
     .code16
-    .include "../macro.s"
+    .include "include/macro.s"
     .text
 
     .global read

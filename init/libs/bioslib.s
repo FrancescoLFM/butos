@@ -1,8 +1,8 @@
-.code16
-.include "../macro.s"
+    .code16
+    .include "include/macro.s"
 
-.global clear
-.global get_cursor_position
+    .global clear
+    .global get_cursor_position
 
 get_cursor_position:
     mov     $0x03, %ah

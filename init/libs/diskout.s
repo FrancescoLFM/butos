@@ -3,7 +3,7 @@
 # This product is under MIT License
 
     .code16
-    .include "../macro.s"
+    .include "include/macro.s"
 
     .text
 

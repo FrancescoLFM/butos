@@ -1,17 +1,18 @@
-NAME	= boot
+NAME		= boot
 
-AS		= as
+AS			= as
 
-SECTORS = $(shell ../programs/configure.sh ../programs/lanfredi.bin)
-ASFLAGS	= --defsym SEC=$(SECTORS)
-LD		= ld
-LDSCR	= $(NAME).ld
+CONFDIR		= ../conf
+SECTORS 	= 0x$(shell cat $(CONFDIR)/sectors.dat)
+ASFLAGS		= -I./ --defsym SEC=$(SECTORS)
 
-HOME	= ..
-TARGET	= $(NAME).bin
-LIBDIR	= $(HOME)/libs
-OBJ		= init.o gdt.o a20.o $(LIBDIR)/write.o $(LIBDIR)/diskout.o $(LIBDIR)/bioslib.o
-ENTRY	= init
+LD			= ld
+LDSCR		= $(NAME).ld
+
+LIBDIR		= libs
+TARGET		= $(NAME).bin
+OBJ			= init.o $(LIBDIR)/gdt.o $(LIBDIR)/write.o $(LIBDIR)/diskout.o $(LIBDIR)/bioslib.o
+ENTRY		= init
 
 .PHONY=all
 all: $(TARGET)
@@ -34,4 +35,4 @@ run: $(TARGET)
 
 .PHONY=clean
 clean:
-	rm $(OBJ) $(TARGET)
+	rm $(LIBDIR)/*.o *.o $(TARGET)

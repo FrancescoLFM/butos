@@ -1,5 +1,5 @@
-#include "print.h"
-#include "asm.h"
+#include <include/print.h>
+#include <include/asm.h>
 
 static struct vga_char *vga_pointer = VGA_TEXT_START;
 

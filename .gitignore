@@ -1,5 +1,5 @@
+.vscode/
 bochs*
 *.o
 ~*
 *.bin
-.vscode/

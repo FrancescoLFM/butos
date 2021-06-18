@@ -1,8 +1,7 @@
 #ifndef VGA_H
 #define VGA_H
 
-#include <stdint.h>
-#include "def.h"
+#include <include/def.h>
 
 #define VGA_TEXT_START  ((void*)(0xb8000))
 #define VGA_TEXT_END    ((void*)(0xb9f40))

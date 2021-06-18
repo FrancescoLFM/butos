@@ -1,5 +1,5 @@
     .code16
-    .include "../macro.s"
+    .include "include/macro.s"
 
     .text
 
@@ -35,6 +35,15 @@ start_f
     call    empty_8042
 
 1:
+end_f
+
+    .global fast_enable_a20
+fast_enable_a20:
+start_f
+    inb	    $0x92
+    andb    $(~0x03), %al
+    orb	    $0x02, %al
+    outb    $0x92
 end_f
 
 empty_8042:

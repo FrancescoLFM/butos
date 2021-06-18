@@ -1,5 +1,5 @@
     .code16
-    .include "../macro.s"
+    .include "include/macro.s"
 
     .text
 

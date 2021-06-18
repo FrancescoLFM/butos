@@ -1,6 +1,6 @@
     .code16
     .text
-    .include    "../macro.s"
+    .include    "include/macro.s"
 
     .global init
 init:
@@ -25,17 +25,6 @@ _start:
     call    read_sector
 
     call    clear
-
-# Enabling A20 Line
-    #mov     $0x2401, %ax
-    #int     $0x15
-
-    #call    enable_a20
-
-    inb	    $0x92
-    andb    $(~0x03), %al
-    orb	    $0x02, %al
-    outb    $0x92
 
     cli
     lgdt    gdt_descriptor
