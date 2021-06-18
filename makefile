@@ -6,7 +6,8 @@ ISODIR	= src/butos
 INIT  	= $(INITDIR)/boot.bin
 ISO		= $(ISODIR)/butos.bin
 
-TARGET	= boot.bin
+BINDIR	= bin
+TARGET	= $(BINDIR)/boot.bin
 
 .PHONY=all
 all: $(TARGET)
@@ -25,7 +26,7 @@ $(ISO):
 clean:
 	make -C $(INITDIR) clean
 	make -C $(ISODIR) clean
-	rm *.bin
+	rm $(TARGET)
 
 .PHONY=run
 run:
