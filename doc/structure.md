@@ -1,5 +1,5 @@
 # Structure
-```dot {engine="circo"}
+```dot
     butos -> init
     butos -> src
     butos -> bin
