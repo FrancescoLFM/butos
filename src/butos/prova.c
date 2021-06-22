@@ -2,20 +2,22 @@
 #include <include/print.h>
 #include <include/asm.h>
 
-void puts(char* string);
+int puts(char* string);
 
 char* htos(char* buffer, uint32_t hex, uint8_t size);
 
 void _start()
 {
-    print_pm(COLOR(GREEN | RED, BLUE), "string");
+    char buffer[sizeof(int)*2 + 1];
+
+    puts(htos(buffer, puts("byte: 0x"), sizeof(int)));
     io_delay();
     stop();
 }
 
-void puts(char* string)
+int puts(char* string)
 {
-    print_pm(COLOR(WHITE, BLACK), string);
+    return print_pm(COLOR(WHITE, BLACK), string);
 }
 
 char* htos(char* buffer, uint32_t hex, uint8_t size)
