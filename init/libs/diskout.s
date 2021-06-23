@@ -32,6 +32,8 @@ start_f
     jmp     1b
 
 2:
+    mov     $panic_msg, %bx
+    call    puts
     movzx   %ah, %dx
     call    printh
 3:
@@ -44,3 +46,6 @@ end:
     jne     2b
     popa
 end_f
+
+panic_msg:
+    .asciz "Disk error, system halted. Error code: "

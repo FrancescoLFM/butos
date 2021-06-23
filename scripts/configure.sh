@@ -14,6 +14,6 @@ fi
 size=$(stat --printf %s $1)
 size=$(expr $size / 512)
 
-echo $size > $config/sectors.dat
+printf "%x" $size > $config/sectors.dat
 
 exit

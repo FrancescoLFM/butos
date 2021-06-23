@@ -12,8 +12,6 @@ LDSCR		= $(NAME).ld
 LIBDIR		= libs
 TARGET		= $(NAME).bin
 OBJ			= init.o $(LIBDIR)/gdt.o $(LIBDIR)/write.o $(LIBDIR)/diskout.o $(LIBDIR)/bioslib.o
-ENTRY		= init
-
 .PHONY=all
 all: $(TARGET)
 

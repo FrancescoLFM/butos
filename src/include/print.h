@@ -18,7 +18,7 @@
 #define WHITE           0b111
 #define BLACK           0b000
 
-#define WHITE_ON_BLACK  0b00000111
+#define STD_COLOR  0b00000111
 
 struct vga_char {
     char    ascii;
@@ -31,6 +31,12 @@ struct cursor {
 };
 
 int print_pm(uint8_t color, char* string);
+
+int puts(char* string);
+
+int putc(uint8_t color, char c);
+
+int printk(uint8_t color, char *str, ...);
 
 /* Cursor */
 

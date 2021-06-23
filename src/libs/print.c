@@ -1,5 +1,6 @@
 #include <include/print.h>
 #include <include/asm.h>
+#include <stdarg.h>
 
 static struct vga_char *vga_pointer = VGA_TEXT_START;
 
@@ -48,14 +49,15 @@ static int vga_tab()
 {
     uint32_t temp;
     uint8_t mod;
+    size_t tab_size = ((VGA_COLS >> 3) * sizeof(struct vga_char));
     
     temp = ((uint32_t)(vga_pointer) - 0xb8000);
-    mod = temp % ((VGA_COLS >> 3) * sizeof(struct vga_char));
-    temp += 16 - mod;
+    mod = temp % tab_size;
+    temp += tab_size - mod;
 
     vga_pointer = (struct vga_char*)((temp) + 0xb8000);
     
-    return 8 - (mod >> 1);
+    return (tab_size - mod) >> 1;
 }
 
 static struct vga_char* dec_vga_pointer(uint16_t pos)
@@ -82,6 +84,9 @@ static int __putc(uint8_t color, char c) {
     case '\t':
         return vga_tab();
     
+    case 0:
+        return 0;
+    
     default:
         vga_pointer->ascii = c;
         vga_pointer->color = color;
@@ -89,6 +94,17 @@ static int __putc(uint8_t color, char c) {
     }
 
     return 1;
+}
+
+int putc(uint8_t color, char c)
+{
+    if (!c)
+        return 0;
+    
+    int relpos = __putc(color, c);
+
+    inc_cursor(relpos);
+    return relpos;
 }
 
 int print_pm(uint8_t color, char* string)
@@ -104,6 +120,56 @@ int print_pm(uint8_t color, char* string)
     inc_cursor(relpos);
 
     return count;
+}
+
+int puts(char* str)
+{
+    return print_pm(STD_COLOR, str);
+}
+
+char* htos(char* buffer, uint32_t hex, uint8_t size)
+{
+    char* digits = "0123456789abcdef";
+    uint8_t nibbles = size << 1;
+
+    for (int i = 0; i < nibbles; i++) {
+        buffer[nibbles - (i + 1)] = digits[hex & 0x0F];
+        hex >>= 4;
+    }
+
+    buffer[nibbles] = 0;
+
+    return buffer;
+}
+
+int printk(uint8_t color, char *str, ...)
+{
+    char buffer[9];
+    uint32_t tp;
+
+    va_list list;
+
+    va_start(list, str);
+
+    while (*str) {
+        if (*str != '%') {
+            putc(color, *str++);
+        } else {
+            str++;
+            switch (*str++) {
+            case 'x':
+                tp = va_arg(list, uint32_t);
+                htos(buffer, tp, sizeof(uint32_t));
+                print_pm(color, buffer);
+                break;
+            case 0:
+                return -1;
+            }
+        }
+    }
+
+    va_end(list);
+    return 0;
 }
 
 void disable_cursor()

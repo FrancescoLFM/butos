@@ -55,4 +55,20 @@ static force_inline void io_delay(void)
     asm volatile("outb %%al,%0" : : "dN" (DELAY_PORT));
 }
 
+static force_inline uint32_t get_rip()
+{
+    uint32_t rip;
+
+    asm volatile ("call 1f;"
+                  "1: pop %0"
+                 : "=r" (rip)
+                 );
+    
+    return rip;
+}
+
+static force_inline void set_interrupts() { asm volatile ("sti"); }
+
+static force_inline void clear_interrupts() { asm volatile ("cli"); }
+
 #endif
