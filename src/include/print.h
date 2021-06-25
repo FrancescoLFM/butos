@@ -23,7 +23,7 @@
 struct vga_char {
     char    ascii;
     uint8_t color;
-};
+} __packed;
 
 struct cursor {
     uint8_t x;
@@ -38,6 +38,8 @@ int putc(uint8_t color, char c);
 
 int printk(uint8_t color, char *str, ...);
 
+char* htos(char* buffer, uint32_t hex, uint8_t size);
+
 /* Cursor */
 
 // default (13, 14)
@@ -47,8 +49,6 @@ void disable_cursor();
 
 void update_cursor(struct cursor crs);
 
-void inc_cursor(uint8_t pos);
-
-void dec_cursor(uint8_t pos);
+void inc_cursor(int pos);
 
 #endif /* VGA_H */

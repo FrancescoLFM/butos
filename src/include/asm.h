@@ -2,8 +2,9 @@
 #define ASM_H
 
 #include <stdint.h>
+#include <include/def.h>
 
-#define force_inline __attribute__((always_inline)) inline
+#define TEST(value, mask)   ((value) & (mask))
 
 static force_inline uint8_t inb(uint16_t port)
 {

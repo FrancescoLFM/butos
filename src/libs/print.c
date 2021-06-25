@@ -5,16 +5,6 @@
 static struct vga_char *vga_pointer = VGA_TEXT_START;
 
 /*
-static void* get_abs_cursor(void* base, uint8_t size, struct cursor crs, uint8_t cols)
-{
-    return base + (crs.y * cols + crs.x) * size;
-}
-
-static void mv_cursor(struct cursor *crs, uint8_t x, uint8_t y)
-{
-    crs->x = x;
-    crs->y = y;
-}
 
 static void mv_vga_pointer(struct cursor crs)
 {
@@ -23,13 +13,17 @@ static void mv_vga_pointer(struct cursor crs)
 }
 */
 
-static struct vga_char* inc_vga_pointer(uint16_t pos)
+static int inc_vga_pointer(int pos)
 {
-    vga_pointer = &vga_pointer[pos];
-    return vga_pointer;
+    uint32_t newpos = (uint32_t)(vga_pointer) + pos;
+
+    pos *= (newpos >= 0xb8000) * (newpos <= 0xb8000 + (VGA_ROWS * VGA_COLS * sizeof(struct vga_char)));
+    vga_pointer += pos;
+
+    return pos;
 }
 
-static struct vga_char* vga_newline() { return inc_vga_pointer(VGA_COLS); }
+static int vga_newline() { return inc_vga_pointer(VGA_COLS); }
 
 static int vga_allign_left()
 {
@@ -60,50 +54,52 @@ static int vga_tab()
     return (tab_size - mod) >> 1;
 }
 
-static struct vga_char* dec_vga_pointer(uint16_t pos)
+static int __putc(uint8_t color, char c)
 {
-    vga_pointer -= pos;
-    return vga_pointer;
-}
+    int disp = 0;
 
-static int __putc(uint8_t color, char c) {
     switch (c) {
     case '\n':
-        vga_newline();
-        return VGA_COLS;
+        if (!vga_newline())
+            return 0;
+        disp += VGA_COLS;
+        __fallthrough;
     
+    case '\r':
+        return disp - vga_allign_left();
+
     case '\b':
-        dec_vga_pointer(1);
+        if (!inc_vga_pointer(-1))
+            return 0;
         vga_pointer->ascii = ' ';
         vga_pointer->color = color;
         return -1;
     
-    case '\r':
-        return -vga_allign_left();
-    
     case '\t':
         return vga_tab();
-    
+
     case 0:
         return 0;
     
     default:
         vga_pointer->ascii = c;
         vga_pointer->color = color;
-        inc_vga_pointer(1);
+        return inc_vga_pointer(1);
     }
 
-    return 1;
+    return 0;
 }
 
 int putc(uint8_t color, char c)
 {
+    int relpos;
+
     if (!c)
         return 0;
     
-    int relpos = __putc(color, c);
-
+    relpos = __putc(color, c);
     inc_cursor(relpos);
+
     return relpos;
 }
 
@@ -226,12 +222,7 @@ struct cursor* get_cursor_position(struct cursor* crs)
     return crs;
 }
 
-void inc_cursor(uint8_t pos)
+void inc_cursor(int pos)
 {
     __update_cursor(__get_cursor_position() + pos);
-}
-
-void dec_cursor(uint8_t pos)
-{
-    __update_cursor(__get_cursor_position() - pos);
 }

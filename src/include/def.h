@@ -15,4 +15,10 @@ typedef unsigned short int  u16;
 typedef unsigned char       u8;
 
 
+// attributes
+
+#define __fallthrough   __attribute__((fallthrough))
+#define __packed        __attribute__((packed))
+#define force_inline    __attribute__((always_inline)) inline
+
 #endif

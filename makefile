@@ -31,3 +31,11 @@ clean:
 .PHONY=run
 run:
 	qemu-system-x86_64 $(TARGET)
+
+.PHONY=disass
+disass:
+	make -C $(ISODIR) disass
+
+.PHONY=debug
+debug:
+	make -C $(ISODIR) debug

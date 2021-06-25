@@ -4,8 +4,8 @@
 #include <include/print.h>
 #include <include/asm.h>
 
-extern uint32_t isrs[ISR_NUM];
-extern uint32_t irqs[IRQ_NUM];
+extern const uint32_t isrs[ISR_NUM];
+extern const uint32_t irqs[IRQ_NUM];
 
 char* htos(char* buffer, uint32_t hex, uint8_t size);
 
