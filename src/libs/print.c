@@ -4,20 +4,14 @@
 
 static struct vga_char *vga_pointer = VGA_TEXT_START;
 
-/*
-
-static void mv_vga_pointer(struct cursor crs)
-{
-    if (crs.x < VGA_COLS && crs.y < VGA_ROWS)
-        vga_pointer = get_abs_cursor(VGA_TEXT_START, sizeof(struct vga_char), crs, VGA_COLS);
-}
-*/
+static const uint32_t MIN_VID = 0xb8000;
+static const uint32_t MAX_VID = 0xb8000 + (VGA_ROWS * VGA_COLS * sizeof(struct vga_char));
 
 static int inc_vga_pointer(int pos)
 {
     uint32_t newpos = (uint32_t)(vga_pointer) + pos;
 
-    pos *= (newpos >= 0xb8000) * (newpos <= 0xb8000 + (VGA_ROWS * VGA_COLS * sizeof(struct vga_char)));
+    pos *= (newpos >= MIN_VID) * (newpos <= MAX_VID);
     vga_pointer += pos;
 
     return pos;

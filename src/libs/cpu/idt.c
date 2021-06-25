@@ -4,12 +4,8 @@
 #include <include/print.h>
 #include <include/asm.h>
 
-extern const uint32_t isrs[ISR_NUM];
-extern const uint32_t irqs[IRQ_NUM];
-
-char* htos(char* buffer, uint32_t hex, uint8_t size);
-
-// IA-32
+extern const uint32_t volatile isrs[ISR_NUM];
+extern const uint32_t volatile irqs[IRQ_NUM];
 
 struct idt_entry {
     uint16_t offset_1;
@@ -19,22 +15,7 @@ struct idt_entry {
     uint16_t offset_2;
 } __attribute__((packed));
 
-/* amd64
-
-struct idt_entry_amd64 {
-    uint16_t offset_1; 
-    uint16_t selector; 
-    uint8_t ist;       
-    uint8_t type_attr; 
-    uint16_t offset_2; 
-    uint32_t offset_3; 
-    uint32_t zero;     
-};
-*/
-
-struct idt_entry idt[UINT8_MAX];
-
-char* htos(char* buffer, uint32_t hex, uint8_t size);
+struct idt_entry volatile idt[UINT8_MAX];
 
 void add_idt_gate(uint8_t n, uint32_t handler)
 {
@@ -101,7 +82,7 @@ struct idt_descriptor{
 
 void load_idt()
 {
-    struct idt_descriptor idt_desc;
+    struct idt_descriptor volatile idt_desc;
     idt_desc.base = (uint32_t) idt;
     idt_desc.limit = IDT_ENTRIES * (sizeof(struct idt_entry)) - 1;
     asm volatile ("lidt (%0)" 

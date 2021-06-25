@@ -1,7 +1,7 @@
 SHELL		= /bin/bash
 
 CC			= gcc
-CFLAGS		= -ffreestanding -m32 -std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter -fno-pie -fno-stack-protector -g
+CFLAGS		= -ffreestanding -m32 -O2 -std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter -fno-pie -fno-stack-protector -g
 LD			= ld
 AS			= as
 ASFLAGS 	= -march=i386 --32

@@ -2,4 +2,5 @@
 bochs*
 *.o
 ~*
+.debug
 *.bin
