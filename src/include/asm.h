@@ -30,6 +30,18 @@ static force_inline uint16_t inw(uint16_t port)
     return ret;
 }
 
+static force_inline uint32_t inl(uint16_t port)
+{
+    uint32_t ret;
+
+    asm volatile ("in %%dx, %%eax"
+                 : "=a" (ret)
+                 : "d"  (port)
+                 );
+    
+    return ret;
+}
+
 static force_inline void outb(uint16_t port, uint8_t value)
 {
     asm volatile ("out %%al, %%dx"
@@ -41,6 +53,14 @@ static force_inline void outb(uint16_t port, uint8_t value)
 static force_inline void outw(uint16_t port, uint16_t value)
 {
     asm volatile ("out %%ax, %%dx"
+                 :
+                 : "a" (value), "d" (port)
+                 );
+}
+
+static force_inline void outl(uint16_t port, uint32_t value)
+{
+    asm volatile ("out %%eax, %%dx"
                  :
                  : "a" (value), "d" (port)
                  );
@@ -71,5 +91,7 @@ static force_inline uint32_t get_rip()
 static force_inline void set_interrupts() { asm volatile ("sti"); }
 
 static force_inline void clear_interrupts() { asm volatile ("cli"); }
+
+static force_inline void iret() { asm volatile ("iret"); }
 
 #endif
