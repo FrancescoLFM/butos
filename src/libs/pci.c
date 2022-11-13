@@ -41,9 +41,9 @@ char **PCI_SUBCLASSES[] = {PCI_UNCLASSIFIED, PCI_MASS_STORAGE, PCI_NETWORK_CONTR
                            PCI_MEMORY_CONTROLLER, PCI_BRIDGE, PCI_COMMS_CONTROLLER, PCI_SYSTEM_PERIPHERAL, PCI_INPUT_CONTROLLER, PCI_DOCKING_STATION,
                            PCI_PROCESSOR, PCI_SERIAL_CONTROLLER, PCI_WIRELESS_CONTROLLER};
 
-uint16_t pci_config_read_word(uint8_t bus, uint8_t device, uint8_t function, uint8_t offset)
+uint32_t pci_config_read_long(uint8_t bus, uint8_t device, uint8_t function, uint8_t offset)
 {
-    uint16_t data;
+    uint32_t data;
     uint32_t address;
     uint32_t cfunction = (uint32_t) function;
     uint32_t cdevice = (uint32_t) device;
@@ -54,42 +54,13 @@ uint16_t pci_config_read_word(uint8_t bus, uint8_t device, uint8_t function, uin
     
     outl(CONFIG_ADDRESS, address);
 
-    data = (uint16_t)((inl(CONFIG_DATA) >> ((offset & 2) * 8)) & 0xFFFF);
+    data = inl(CONFIG_DATA);
 
     return data;
 }
 
-uint16_t pci_get_vendorid(uint8_t bus, uint8_t device)
+char *pci_get_class(uint8_t classcode)
 {
-    uint16_t vendor_id;
-
-    vendor_id = pci_config_read_word(bus, device, 0, 0);
-
-    return vendor_id;
-}
-
-uint16_t pci_get_deviceid(uint8_t bus, uint8_t device)
-{
-    uint16_t device_id;
-
-    device_id = pci_config_read_word(bus, device, 0, 0x02);
-
-    return device_id;
-}
-
-uint8_t pci_get_classcode(uint8_t bus, uint8_t device)
-{
-    uint8_t classcode;
-
-    classcode = (uint8_t) (pci_config_read_word(bus, device, 0, 0x0A) >> 8);
-
-    return classcode;
-}
-
-char *pci_get_class(uint8_t bus, uint8_t device)
-{
-    uint8_t classcode = pci_get_classcode(bus, device);
-
     if (classcode == 0xFF)
         return "Unassigned Class (Vendor specific)";
     if(classcode == 0x40)
@@ -100,24 +71,33 @@ char *pci_get_class(uint8_t bus, uint8_t device)
     return PCI_CLASSCODES[classcode];
 }
 
-uint8_t pci_get_subclasscode(uint8_t bus, uint8_t device)
+char *pci_get_subclass(uint8_t classcode, uint8_t subclasscode)
 {
-    uint8_t subclasscode;
-
-    subclasscode = (uint8_t) (pci_config_read_word(bus, device, 0, 0x0A) & 0xFF);
-
-    return subclasscode;
-}
-
-char *pci_get_subclass(uint8_t bus, uint8_t device)
-{
-    uint8_t classcode = pci_get_classcode(bus, device);
-    uint8_t subclasscode = pci_get_subclasscode(bus, device);
-
     if(classcode >= 0x13)
         return NULL;
     if(subclasscode == 0x80) // Generic device
-        return pci_get_class(bus, device);
+        return pci_get_class(classcode);
     
     return PCI_SUBCLASSES[classcode][subclasscode];
+}
+
+struct pci_device_info pci_read_device_info(uint8_t bus, uint8_t device)
+{
+    uint32_t reg_zero = REG0(bus, device);
+    uint32_t reg_two = REG2(bus, device);
+    uint32_t reg_three = REG3(bus, device);
+
+    struct pci_device_info pci_device = {
+        .bus = bus,
+        .device_number = device,
+        .vendor_id = REG_WORD(reg_zero, VENDOR_OFFSET),
+        .device_id = REG_WORD(reg_zero, DEVICEID_OFFSET),
+        .revision_id = REG_BYTE(reg_two, REVISIONID_OFFSET),
+        .prog_if = REG_BYTE(reg_two, PROGIF_OFFSET),
+        .subclass = REG_BYTE(reg_two, SUBCLASS_OFFSET),
+        .class_code = REG_BYTE(reg_two, CLASSCODE_OFFSET),
+        .header_type = REG_BYTE(reg_three, HEADERTYPE_OFFSET)
+    };
+
+    return pci_device;
 }

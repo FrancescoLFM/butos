@@ -6,22 +6,22 @@
 
 void _start()
 {
-    uint16_t deviceid;
+    struct pci_device_info device_info;
     uint16_t bus, device;
 
     isr_install();
-    init_kb();
 
     for(bus=0; bus < 256; bus++)
         for(device=0; device < 32; device++) {
-            deviceid = pci_get_deviceid(bus, device);
+            device_info = pci_read_device_info(bus, device);
 
-            if (deviceid != 0xFFFF) {   
-                printk(STD_COLOR, "%x.%x:%x: ", device, pci_get_vendorid(bus, device), deviceid);
-                puts(pci_get_subclass(bus, device));
+            if (device_info.device_id != 0xFFFF) {
+                printk(STD_COLOR, "%x:%x ", device_info.vendor_id, device_info.device_id);
+                puts(pci_get_subclass(device_info.class_code, device_info.subclass));
                 putc(STD_COLOR, '\n');
             }
         }
+    init_kb();
 
     stop();
 }
