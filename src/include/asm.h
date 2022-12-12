@@ -22,7 +22,7 @@ static force_inline uint16_t inw(uint16_t port)
 {
     uint16_t ret;
 
-    asm volatile ("in %%dx, %%ax"
+    asm volatile ("inw %%dx, %%ax"
                  : "=a" (ret)
                  : "d"  (port)
                  );

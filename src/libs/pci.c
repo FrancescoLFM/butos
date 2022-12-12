@@ -1,5 +1,6 @@
 #include <include/pci.h>
 #include <include/asm.h>
+#include <include/print.h>
 
 char *PCI_CLASSCODES[] = {"Unclassified", "Mass Storage Controller", "Network Controller", "Display Controller",
                           "Multimedia Controller", "Memory Controller", "Bridge", "Simple Communication Controller",
@@ -41,6 +42,15 @@ char **PCI_SUBCLASSES[] = {PCI_UNCLASSIFIED, PCI_MASS_STORAGE, PCI_NETWORK_CONTR
                            PCI_MEMORY_CONTROLLER, PCI_BRIDGE, PCI_COMMS_CONTROLLER, PCI_SYSTEM_PERIPHERAL, PCI_INPUT_CONTROLLER, PCI_DOCKING_STATION,
                            PCI_PROCESSOR, PCI_SERIAL_CONTROLLER, PCI_WIRELESS_CONTROLLER};
 
+void pci_config_write_long(uint8_t bus, uint8_t device, uint8_t function, uint8_t offset, uint32_t value)
+{
+    pci_config_read_long(bus, device, function, offset);
+
+    outl(CONFIG_DATA, value);
+
+    return;
+}
+
 uint32_t pci_config_read_long(uint8_t bus, uint8_t device, uint8_t function, uint8_t offset)
 {
     uint32_t data;
@@ -50,7 +60,7 @@ uint32_t pci_config_read_long(uint8_t bus, uint8_t device, uint8_t function, uin
     uint32_t cbus = (uint32_t) bus;
 
     address = (uint32_t) (offset & 0xFC) | cfunction << 8 | 
-               cdevice << 11 | cbus << 16 | 1 << 31;
+               cdevice << 11 | cbus << 16 | ENABLE_BIT;
     
     outl(CONFIG_ADDRESS, address);
 
@@ -81,23 +91,31 @@ char *pci_get_subclass(uint8_t classcode, uint8_t subclasscode)
     return PCI_SUBCLASSES[classcode][subclasscode];
 }
 
-struct pci_device_info pci_read_device_info(uint8_t bus, uint8_t device)
+struct pci_device_info *pci_read_device_info(uint8_t bus, uint8_t device, struct pci_device_info *pci_dev)
 {
     uint32_t reg_zero = REG0(bus, device);
     uint32_t reg_two = REG2(bus, device);
     uint32_t reg_three = REG3(bus, device);
 
-    struct pci_device_info pci_device = {
-        .bus = bus,
-        .device_number = device,
-        .vendor_id = REG_WORD(reg_zero, VENDOR_OFFSET),
-        .device_id = REG_WORD(reg_zero, DEVICEID_OFFSET),
-        .revision_id = REG_BYTE(reg_two, REVISIONID_OFFSET),
-        .prog_if = REG_BYTE(reg_two, PROGIF_OFFSET),
-        .subclass = REG_BYTE(reg_two, SUBCLASS_OFFSET),
-        .class_code = REG_BYTE(reg_two, CLASSCODE_OFFSET),
-        .header_type = REG_BYTE(reg_three, HEADERTYPE_OFFSET)
-    };
+    pci_dev->bus = bus;
+    pci_dev->device_number = device;
+    pci_dev->vendor_id = REG_WORD(reg_zero, VENDOR_OFFSET);
+    pci_dev->device_id = REG_WORD(reg_zero, DEVICEID_OFFSET);
+    pci_dev->revision_id = REG_BYTE(reg_two, REVISIONID_OFFSET);
+    pci_dev->prog_if = REG_BYTE(reg_two, PROGIF_OFFSET);
+    pci_dev->subclass = REG_BYTE(reg_two, SUBCLASS_OFFSET);
+    pci_dev->class_code = REG_BYTE(reg_two, CLASSCODE_OFFSET);
+    pci_dev->header_type = REG_BYTE(reg_three, HEADERTYPE_OFFSET);
 
-    return pci_device;
+    return pci_dev;
+}
+
+uint8_t pci_read_device_status(uint8_t bus, uint8_t device)
+{
+    uint32_t reg_one = REG1(bus, device);
+    uint8_t status;
+
+    status = REG_BYTE(reg_one, STATUS_OFFSET);
+
+    return status;
 }

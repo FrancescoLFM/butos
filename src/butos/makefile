@@ -14,7 +14,7 @@ CONFDIR		= ../$(PROGDIR)/conf
 
 CFLAGS 	   += -I$(PROGDIR)/
 
-OBJ			= prova.o $(LIBDIR)/print.o $(LIBDIR)/string.o $(LIBDIR)/pci.o $(LIBDIR)/kb.o $(LIBDIR)/array.o $(LIBCPUDIR)/idt.o $(LIBCPUDIR)/isr.o $(LIBCPUDIR)/pic.o
+OBJ			= prova.o $(LIBDIR)/print.o $(LIBDIR)/string.o $(LIBDIR)/pci.o $(LIBDIR)/ide.o $(LIBDIR)/kb.o $(LIBDIR)/array.o $(LIBCPUDIR)/idt.o $(LIBCPUDIR)/isr.o $(LIBCPUDIR)/pic.o
 NAME		= butos
 TARGET		= $(NAME).bin
 LDSCRIPT	= $(NAME).ld
