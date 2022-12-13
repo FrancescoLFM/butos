@@ -4,51 +4,55 @@
 
 static struct vga_char *vga_pointer = VGA_TEXT_START;
 
-static const uint32_t MIN_VID = 0xb8000;
-static const uint32_t MAX_VID = 0xb8000 + (VGA_ROWS * VGA_COLS * sizeof(struct vga_char));
+static const struct vga_char *MIN_VID = VGA_TEXT_START;
+static const struct vga_char *MAX_VID = VGA_TEXT_START + (VGA_ROWS * VGA_COLS);
 
-static int inc_vga_pointer(int pos)
+#define IN_BOUNDS(LEFT, A, RIGHT)   ((LEFT) < (A) && (A) < (RIGHT))
+#define IN_BOUNDS_EQ(LEFT, A, RIGHT) ((LEFT) <= (A) && (A) <= (RIGHT))
+
+#define ABS(A)  ((A) >= 0 ? (A) : -(A))
+#define SGN(A)  ((A) >= 0 ? 1 : -1)
+
+static int vga_inc_pointer(int pos)
 {
-    uint32_t newpos = (uint32_t)(vga_pointer) + pos;
 
-    pos *= (newpos >= MIN_VID) * (newpos <= MAX_VID);
+    if (!IN_BOUNDS(MIN_VID, vga_pointer + pos, MAX_VID))
+        pos = 0;
+    
     vga_pointer += pos;
 
     return pos;
 }
 
-static int vga_newline() { return inc_vga_pointer(VGA_COLS); }
+static int vga_newline() { return vga_inc_pointer(VGA_COLS); }
 
 static int vga_allign_left()
 {
     uint32_t temp;
     uint8_t mod;
     
-    temp = ((uint32_t)(vga_pointer) - 0xb8000);
-    mod = temp % (VGA_COLS * sizeof(struct vga_char));
+    temp = (uint32_t)(vga_pointer - VGA_TEXT_START);
+    mod = temp % VGA_COLS;
     temp -= mod;
 
-    vga_pointer = (struct vga_char*)((temp) + 0xb8000);
+    vga_pointer = VGA_TEXT_START + temp;
     
-    return mod >> 1;
+    return mod;
 }
 
 static int vga_tab()
 {
-    uint32_t temp;
     uint8_t mod;
-    size_t tab_size = ((VGA_COLS >> 3) * sizeof(struct vga_char));
+    size_t tab_size;
     
-    temp = ((uint32_t)(vga_pointer) - 0xb8000);
-    mod = temp % tab_size;
-    temp += tab_size - mod;
-
-    vga_pointer = (struct vga_char*)((temp) + 0xb8000);
+    /* Divido lo spazio in otto colonne */
+    tab_size = VGA_COLS / 8;
+    mod = (vga_pointer - VGA_TEXT_START) % tab_size;
     
-    return (tab_size - mod) >> 1;
+    return vga_inc_pointer(tab_size - mod);
 }
 
-static int __putc(uint8_t color, char c)
+static int putc_internal(uint8_t color, char c)
 {
     int disp = 0;
 
@@ -63,7 +67,7 @@ static int __putc(uint8_t color, char c)
         return disp - vga_allign_left();
 
     case '\b':
-        if (!inc_vga_pointer(-1))
+        if (!vga_inc_pointer(-1))
             return 0;
         vga_pointer->ascii = ' ';
         vga_pointer->color = color;
@@ -78,7 +82,7 @@ static int __putc(uint8_t color, char c)
     default:
         vga_pointer->ascii = c;
         vga_pointer->color = color;
-        return inc_vga_pointer(1);
+        return vga_inc_pointer(1);
     }
 
     return 0;
@@ -91,7 +95,7 @@ int putc(uint8_t color, char c)
     if (!c)
         return 0;
     
-    relpos = __putc(color, c);
+    relpos = putc_internal(color, c);
     inc_cursor(relpos);
 
     return relpos;
@@ -103,7 +107,7 @@ int print_pm(uint8_t color, char* string)
     int relpos = 0;
 
     while (*string) {
-        relpos += __putc(color, *string++);
+        relpos += putc_internal(color, *string++);
         count++;
     }
 
@@ -117,45 +121,114 @@ int puts(char* str)
     return print_pm(STD_COLOR, str);
 }
 
-char* htos(char* buffer, uint32_t hex, uint8_t size)
-{
-    char* digits = "0123456789abcdef";
-    uint8_t nibbles = size << 1;
+static char* digits = "0123456789abcdef";
+#define MIN_BASE    2
+#define MAX_BASE    16
 
-    for (int i = 0; i < nibbles; i++) {
-        buffer[nibbles - (i + 1)] = digits[hex & 0x0F];
-        hex >>= 4;
+static int base_convert_r(char *buffer, size_t size, uint32_t num, uint32_t base)
+{
+    int depth;
+
+    if (num <= 0)
+        return 0;
+
+    depth = base_convert_r(buffer, size, num / base, base);
+    if (depth < 0 || (size_t)depth >= size)
+        return -1;
+    
+    buffer[depth] = digits[num % base];
+    
+    return depth + 1;
+}
+
+int base_convert(char *buffer, size_t size, uint32_t num, uint32_t base)
+{
+    int length;
+
+    if (!IN_BOUNDS_EQ(MIN_BASE, base, MAX_BASE))
+        return -1;
+    
+    if (size < 2)
+        return -1;
+    
+    if (num == 0) {
+        buffer[0] = digits[0];
+        buffer[1] = '\0';
+        length = 1;
     }
 
-    buffer[nibbles] = 0;
-
-    return buffer;
+    length = base_convert_r(buffer, size-1, num, base);
+    if (length < 0)
+        return -1;
+    
+    buffer[length] = '\0';
+    
+    return length;
 }
 
 int printk(uint8_t color, char *str, ...)
 {
-    char buffer[9];
-    uint32_t tp;
-
     va_list list;
+    char buffer[80];
+
+    char opt;
+    uint32_t num;
+    int is_signed, base;
+    int error = 0;
+
+    int read = 0;
 
     va_start(list, str);
 
     while (*str) {
         if (*str != '%') {
             putc(color, *str++);
-        } else {
-            str++;
-            switch (*str++) {
-            case 'x':
-                tp = va_arg(list, uint32_t);
-                htos(buffer, tp, sizeof(uint32_t));
-                print_pm(color, buffer);
-                break;
-            case 0:
-                return -1;
-            }
+            continue;
         }
+        
+        // Lettura dei comandi 
+        str++;
+        opt = *str++;
+
+        if (opt == 's') {
+            char *p = va_arg(list, char *);
+            print_pm(color, p);
+            continue;
+        }
+
+        is_signed = 0;
+        switch (opt) {
+            case 'x':
+                base = 16;
+                break;
+            
+            case 'd':
+                is_signed = 1;
+                __fallthrough;
+            case 'u':
+                base = 10;
+                break;
+
+            case 'b':
+                base = 2;
+                break;
+            
+            case 'o':
+                base = 8;
+                break;
+            
+            default:
+                return read;
+        }
+
+        num = va_arg(list, uint32_t);
+        error = base_convert(buffer, 80, is_signed ? (uint32_t)ABS((int32_t)num) : num, base) <= 0;
+        if (error)
+            return read;
+        
+        if (is_signed && (int32_t)num < 0)
+            putc(color, '-');
+        print_pm(color, buffer);
     }
 
     va_end(list);

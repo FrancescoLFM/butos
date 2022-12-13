@@ -3,8 +3,8 @@
 
 #include <include/def.h>
 
-#define VGA_TEXT_START  ((void*)(0xb8000))
-#define VGA_TEXT_END    ((void*)(0xb9f40))
+#define VGA_TEXT_START  ((struct vga_char *)(0xb8000))
+#define VGA_TEXT_END    ((struct vga_char *)(0xb9f40))
 #define VGA_COLS        80
 #define VGA_WIDTH       VGA_COLS
 #define VGA_ROWS        25
