@@ -1,9 +1,8 @@
-#ifndef KB_H
-#define KB_H
+#ifndef DRIVERS_KB_H
+#define DRIVERS_KB_H
 
-#include <include/array.h>
-
-#define ARR_SIZE(arr)   ((sizeof(arr)) / (sizeof(arr[0])))
+#include <libs/array.h>
+#include <include/def.h>
 
 #define MAX_SCANCODES   ARR_SIZE(NORMAL_KEYS_C)
 

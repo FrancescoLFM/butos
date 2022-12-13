@@ -1,56 +1,7 @@
-#include <include/print.h>
+#include <libs/print.h>
+#include <drivers/vga.h>
 #include <include/asm.h>
 #include <stdarg.h>
-
-static struct vga_char *vga_pointer = VGA_TEXT_START;
-
-static const struct vga_char *MIN_VID = VGA_TEXT_START;
-static const struct vga_char *MAX_VID = VGA_TEXT_START + (VGA_ROWS * VGA_COLS);
-
-#define IN_BOUNDS(LEFT, A, RIGHT)   ((LEFT) < (A) && (A) < (RIGHT))
-#define IN_BOUNDS_EQ(LEFT, A, RIGHT) ((LEFT) <= (A) && (A) <= (RIGHT))
-
-#define ABS(A)  ((A) >= 0 ? (A) : -(A))
-#define SGN(A)  ((A) >= 0 ? 1 : -1)
-
-static int vga_inc_pointer(int pos)
-{
-
-    if (!IN_BOUNDS(MIN_VID, vga_pointer + pos, MAX_VID))
-        pos = 0;
-    
-    vga_pointer += pos;
-
-    return pos;
-}
-
-static int vga_newline() { return vga_inc_pointer(VGA_COLS); }
-
-static int vga_allign_left()
-{
-    uint32_t temp;
-    uint8_t mod;
-    
-    temp = (uint32_t)(vga_pointer - VGA_TEXT_START);
-    mod = temp % VGA_COLS;
-    temp -= mod;
-
-    vga_pointer = VGA_TEXT_START + temp;
-    
-    return mod;
-}
-
-static int vga_tab()
-{
-    uint8_t mod;
-    size_t tab_size;
-    
-    /* Divido lo spazio in otto colonne */
-    tab_size = VGA_COLS / 8;
-    mod = (vga_pointer - VGA_TEXT_START) % tab_size;
-    
-    return vga_inc_pointer(tab_size - mod);
-}
 
 static int putc_internal(uint8_t color, char c)
 {
@@ -69,8 +20,7 @@ static int putc_internal(uint8_t color, char c)
     case '\b':
         if (!vga_inc_pointer(-1))
             return 0;
-        vga_pointer->ascii = ' ';
-        vga_pointer->color = color;
+        vga_write(color, ' ');
         return -1;
     
     case '\t':
@@ -80,8 +30,7 @@ static int putc_internal(uint8_t color, char c)
         return 0;
     
     default:
-        vga_pointer->ascii = c;
-        vga_pointer->color = color;
+        vga_write(color, c);
         return vga_inc_pointer(1);
     }
 

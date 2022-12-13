@@ -2,6 +2,7 @@
 #define PIC_H
 
 #include <stdint.h>
+#include <include/def.h>
 
 #define PIC1            0x20
 #define PIC2            0xA0
@@ -22,9 +23,6 @@
 #define ICW4_SFNM       0x10
 
 #define EOI             0x20
-
-#define LOW_OFFSET(off)     ((off) & 0xff)
-#define HIGH_OFFSET(off)    (((off) >> 8) & 0xff)
 
 void pic_send_command(uint8_t pic, uint8_t command);
 

@@ -1,8 +1,7 @@
-#ifndef IDT_H
-#define IDT_H
+#ifndef CPU_IDT_H
+#define CPU_IDT_H
 
-#define low_16(addr)    (uint16_t)(((addr) & 0xFFFF));
-#define high_16(addr)   (uint16_t)(((addr) >> 16) & 0xFFFF);
+#include <include/def.h>
 
 #define ISR_NUM         32
 #define IRQ_NUM         16

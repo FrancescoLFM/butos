@@ -2,7 +2,7 @@
 #define IDE_H
 
 #include <include/def.h>
-#include <include/pci.h>
+#include <drivers/pci.h>
 
 // See drive prog if...
 

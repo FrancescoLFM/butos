@@ -1,6 +1,6 @@
 // Code by Giovanni Zaccaria
 
-#include <include/pic.h>
+#include <cpu/pic.h>
 #include <include/asm.h>
 
 

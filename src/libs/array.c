@@ -1,4 +1,4 @@
-#include <include/array.h>
+#include <libs/array.h>
 
 void clean_array(struct butos_array *b_array)
 {

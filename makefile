@@ -16,7 +16,10 @@ SIZE	= 100M
 VMARGS	= -device piix3-ide,id=ide -drive id=disk,file=$(IMG),format=raw,if=none -device ide-hd,drive=disk,bus=ide.0
 
 .PHONY=all
-all: $(TARGET)
+all:
+	make $(INIT)
+	make $(ISO)
+	make $(TARGET)
 
 $(TARGET): $(ISO) $(INIT)
 	$(DD) seek=0 bs=512 count=1 conv=notrunc if=$(INIT) of=$@

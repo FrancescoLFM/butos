@@ -1,20 +1,28 @@
 SHELL		= /bin/bash
 
 CC			= gcc
-CFLAGS		= -ffreestanding -m32 -O2 -std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter -fno-pie -fno-stack-protector -g
+CFLAGS		= -ffreestanding -m32 -O2 -std=gnu99 -Wall -Wextra -Werror -fno-pie -fno-stack-protector -g
 LD			= ld
 AS			= as
 ASFLAGS 	= -march=i386 --32
 
+# Cartelle
 PROGDIR		= ..
 LIBDIR		= $(PROGDIR)/libs
-LIBCPUDIR	= $(LIBDIR)/cpu
+LIBCPUDIR	= $(PROGDIR)/cpu
+DRIVERSDIR  = $(PROGDIR)/drivers
 SCRIPTDIR 	= ../$(PROGDIR)/scripts
 CONFDIR		= ../$(PROGDIR)/conf
 
 CFLAGS 	   += -I$(PROGDIR)/
 
-OBJ			= prova.o $(LIBDIR)/print.o $(LIBDIR)/string.o $(LIBDIR)/pci.o $(LIBDIR)/ide.o $(LIBDIR)/kb.o $(LIBDIR)/array.o $(LIBCPUDIR)/idt.o $(LIBCPUDIR)/isr.o $(LIBCPUDIR)/pic.o
+# File oggetto
+OBJ			= prova.o
+OBJ		   += $(LIBCPUDIR)/idt.o $(LIBCPUDIR)/isr.o $(LIBCPUDIR)/pic.o
+OBJ		   += $(LIBDIR)/print.o $(LIBDIR)/string.o $(LIBDIR)/array.o
+OBJ		   += $(DRIVERSDIR)/pci.o $(DRIVERSDIR)/ide.o $(DRIVERSDIR)/keyboard.o $(DRIVERSDIR)/vga.o
+
+
 NAME		= butos
 TARGET		= $(NAME).bin
 LDSCRIPT	= $(NAME).ld

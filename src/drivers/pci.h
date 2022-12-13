@@ -69,9 +69,9 @@ struct pci_device_info
 void pci_config_write_long(uint8_t bus, uint8_t device, uint8_t function, uint8_t offset, uint32_t value);
 uint8_t pci_read_device_status(uint8_t bus, uint8_t device);
 uint32_t pci_config_read_long(uint8_t bus, uint8_t device, uint8_t function, uint8_t offset);
-char *pci_get_class(uint8_t classcode);
+const char *pci_get_class(uint8_t classcode);
 // Returns class if subclass is generic
-char *pci_get_subclass(uint8_t classcode, uint8_t subclasscode);
+const char *pci_get_subclass(uint8_t classcode, uint8_t subclasscode);
 struct pci_device_info *pci_read_device_info(uint8_t bus, uint8_t device, struct pci_device_info *pci_dev);
 
 #endif

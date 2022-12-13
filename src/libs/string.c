@@ -1,4 +1,4 @@
-#include <include/string.h>
+#include <libs/string.h>
 
 void *memcpy(void *to, const void *from, size_t n)
 {
@@ -17,12 +17,14 @@ void *memccpy(void *to, const void *from, size_t c, size_t n)
     for(i = 0; cfrom[i] != c && i < n; i++)
         cto[i] = cfrom[i];
     if(cto[i-1] == c) return to;
+
     return NULL;
 }
 
-int strcmp(const char *str1, const char *str2) // testato, funziona
+int strcmp(const char *str1, const char *str2)
 {
     int i;
+
     for(i = 0; str1[i] && str2[i]; i++)
         if(str1[i] != str2[i]) 
             return 1;
@@ -30,15 +32,16 @@ int strcmp(const char *str1, const char *str2) // testato, funziona
     return (str1[i] != str2[i]);
 }
 
-int strncmp(const char *str1, const char *str2, size_t n) // testato, funziona
+int strncmp(const char *str1, const char *str2, size_t n)
 {
     for(size_t i = 0; str1[i] && str2[i] && i < n; i++)
         if(str1[i] != str2[i]) 
             return 1;
+    
     return 0;
 }
 
-size_t strlen(const char *str) // testato, funziona
+size_t strlen(const char *str)
 {
     size_t len = 0;
 
@@ -47,7 +50,7 @@ size_t strlen(const char *str) // testato, funziona
     return len;
 }
 
-char *strcpy(char *to, const char *from) // testato, funziona
+char *strcpy(char *to, const char *from)
 {
     int i;
 
@@ -57,9 +60,10 @@ char *strcpy(char *to, const char *from) // testato, funziona
     return to;
 }
 
-char *strncpy(char *to, const char *from, size_t n) // testato, funziona
+char *strncpy(char *to, const char *from, size_t n)
 {
     size_t i;
+    
     for(i = 0; from[i] && i < n; i++) to[i] = from[i];
     to[i] = '\0';
 

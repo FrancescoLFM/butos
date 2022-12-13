@@ -1,8 +1,8 @@
 #include <stdint.h>
-#include <include/idt.h>
-#include <include/pic.h>
-#include <include/print.h>
 #include <include/asm.h>
+#include <cpu/idt.h>
+#include <cpu/pic.h>
+#include <libs/print.h>
 
 extern const uint32_t volatile isrs[ISR_NUM];
 extern const uint32_t volatile irqs[IRQ_NUM];

@@ -1,9 +1,9 @@
 #include <include/asm.h>
-#include <include/ide.h>
-#include <include/print.h>
-#include <include/pic.h>
-#include <include/idt.h>
-#include <include/string.h>
+#include <drivers/ide.h>
+#include <libs/print.h>
+#include <cpu/pic.h>
+#include <cpu/idt.h>
+#include <libs/string.h>
 
 void ide_device_get_model(struct ide_device *ide_dev, char *buffer)
 {
@@ -84,10 +84,10 @@ void ide_string_sec_seek(struct ide_device *ide_dev, char *str, uint8_t channel_
 
 void ide_read_buffer(struct ide_device *ide_dev, uint8_t channel_n)
 {
-    ide_write(ide_dev, ATA_REG_COMMAND, ATA_PRIMARY, ATA_CMD_IDENTIFY);
+    ide_write(ide_dev, ATA_REG_COMMAND, channel_n, ATA_CMD_IDENTIFY);
 
     for (uint16_t i = 0; i < ATA_IDENT_WORDS; i++)
-        ide_dev->ident_buffer[i] = ide_read(ide_dev, ATA_REG_DATA, ATA_PRIMARY);
+        ide_dev->ident_buffer[i] = ide_read(ide_dev, ATA_REG_DATA, channel_n);
 }
 
 void print_ide_device_error(struct ide_device *ide_dev, uint8_t channel_n)
@@ -212,21 +212,12 @@ void ide_channels_init(struct pci_device_info *pci_dev, struct ide_channel ide_c
     return;
 }
 
-void ide_handler(struct registers_t *regs)
-{
-    printk(STD_COLOR, "IDE interrupt\n");
-
-    return;
-}
-
 void ide_device_init(struct pci_device_info *pci_dev, struct ide_device *ide_dev)
 {
     ide_channels_init(pci_dev, ide_dev->channels);
     ide_read_buffer(ide_dev, ATA_PRIMARY);
 
     ide_dev->nIEN = 0;
-
-    set_int_handler(IRQ(14), ide_handler);
 
     return;
 }
