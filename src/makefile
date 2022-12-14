@@ -62,8 +62,7 @@ $(TARGET): $(NAME).out
 	rm $^
 
 .PHONY=debug
-debug: $(TARGET)
-	make -C ../.. all
+debug:
 	qemu-system-x86_64 -s -S $(PROGDIR)/../bin/boot.bin &
 	$(DBG) -q -s $(DGBSYM) -x $(DGBSCR)
 	killall qemu-system-x86

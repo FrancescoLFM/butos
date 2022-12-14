@@ -12,8 +12,8 @@ static uint8_t vga_ioas = 0;
 
 static struct vga_char *vga_pointer = VGA_TEXT_START;
 
-static const struct vga_char *MIN_VID = VGA_TEXT_START;
-static const struct vga_char *MAX_VID = VGA_TEXT_START + (VGA_ROWS * VGA_COLS);
+#define MIN_VID VGA_TEXT_START
+#define MAX_VID VGA_TEXT_START + (VGA_ROWS * VGA_COLS)
 
 void vga_open()
 {
@@ -32,8 +32,25 @@ void vga_pointer_set(struct vga_char *address)
 
 int vga_pointer_inc(int pos)
 {
-    if (!IN_BOUNDS(MIN_VID-1, vga_pointer + pos, MAX_VID))
+    int quot, mod;
+
+    if (vga_pointer + pos <= VGA_TEXT_START)
         pos = 0;
+
+    /* scrolling */
+    if (vga_pointer + pos >= MAX_VID) {
+        quot = (vga_pointer + pos - MIN_VID) / VGA_COLS - VGA_ROWS; /* extra needed rows */
+        mod = (vga_pointer + pos - VGA_TEXT_START) % VGA_COLS;      /* offset from last row start */
+        
+        /* acquire needed rows */
+        for (int i = 0; i < quot; i++)
+            vga_scroll_down();
+        vga_scroll_down();
+        
+        /* move to mod offset */
+        vga_pointer_set((MAX_VID - VGA_COLS) + mod);
+        return pos;
+    }
     
     vga_pointer += pos;
     vga_cursor_inc(pos);
@@ -52,8 +69,6 @@ int vga_newline()
     int pos;
     
     pos = vga_pointer_inc(VGA_COLS);
-    if (pos == 0)
-        vga_scroll_down();
     
     return pos;
 }
