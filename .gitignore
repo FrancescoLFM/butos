@@ -4,3 +4,4 @@ bochs*
 ~*
 *.debug
 *.bin
+qemu/vhdd.img

@@ -31,8 +31,10 @@ typedef unsigned char       u8;
 
 #define LOW_OFFSET(off)     ((off) & 0xff)
 #define HIGH_OFFSET(off)    (((off) >> 8) & 0xff)
-#define low_16(addr)    (uint16_t)(((addr) & 0xFFFF));
-#define high_16(addr)   (uint16_t)(((addr) >> 16) & 0xFFFF);
+#define low_16(addr)        (uint16_t)(((addr) & 0xFFFF));
+#define high_16(addr)       (uint16_t)(((addr) >> 16) & 0xFFFF);
+
+#define BIT(N)              (0x01 << (N)) 
 
 
 #endif

@@ -9,9 +9,8 @@ static int putc_internal(uint8_t color, char c)
 
     switch (c) {
     case '\n':
-        if (!vga_newline())
-            return 0;
-        disp += VGA_COLS;
+        if (vga_newline())
+            disp += VGA_COLS;
         __fallthrough;
     
     case '\r':
@@ -103,7 +102,7 @@ int base_convert(char *buffer, size_t size, uint32_t num, uint32_t base)
     if (num == 0) {
         buffer[0] = digits[0];
         buffer[1] = '\0';
-        length = 1;
+        return 1;
     }
 
     length = base_convert_r(buffer, size-1, num, base);
@@ -178,67 +177,9 @@ int printk(uint8_t color, char *str, ...)
         if (is_signed && (int32_t)num < 0)
             putc(color, '-');
         print_pm(color, buffer);
+        read++;
     }
 
     va_end(list);
-    return 0;
-}
-
-void disable_cursor()
-{
-	outb(0x3D4, 0x0A);
-	outb(0x3D5, 0x20);
-}
-
-void enable_cursor(uint8_t cursor_start, uint8_t cursor_end)
-{
-    // select register 0x0A (cursor start register)
-    outb(0x3D4, 0x0A);
-
-    // write Cursor Scan Line Start
-    outb(0x3D5, (inb(0x3D5) & 0xC0) | cursor_start);
-
-    outb(0x3D4, 0x0B);
-	outb(0x3D5, (inb(0x3D5) & 0xE0) | cursor_end);
-}
-
-static void __update_cursor(uint16_t pos)
-{
-    outb(0x3D4, 0x0F);
-	outb(0x3D5, (uint8_t) (pos & 0xFF));
-	outb(0x3D4, 0x0E);
-	outb(0x3D5, (uint8_t) ((pos >> 8) & 0xFF));
-}
-
-void update_cursor(const struct cursor crs)
-{
-	uint16_t pos = crs.y * VGA_WIDTH + crs.x;
-	__update_cursor(pos);
-}
-
-static uint16_t __get_cursor_position()
-{
-    uint16_t pos = 0;
-
-    outb(0x3D4, 0x0F);
-    pos |= inb(0x3D5);
-    outb(0x3D4, 0x0E);
-    pos |= ((uint16_t)inb(0x3D5)) << 8;
-
-    return pos;
-}
-
-struct cursor* get_cursor_position(struct cursor* crs)
-{
-    uint16_t pos = __get_cursor_position();
-
-    crs->x = pos % VGA_WIDTH;
-    crs->y = (pos - crs->x) / VGA_WIDTH;
-
-    return crs;
-}
-
-void inc_cursor(int pos)
-{
-    __update_cursor(__get_cursor_position() + pos);
+    return read;
 }
