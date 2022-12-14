@@ -102,7 +102,7 @@ struct cursor {
 };
 
 void vga_open();
-int vga_inc_pointer(int pos);
+int vga_pointer_inc(int pos);
 void vga_write(uint8_t color, char c);
 int vga_newline();
 int vga_allign_left();
@@ -119,9 +119,10 @@ void vga_register_write(uint8_t data);
 
 void vga_cursor_disable();
 void vga_cursor_enable(uint8_t cursor_start, uint8_t cursor_end);
+uint16_t vga_cursor_get_position_();
+void vga_cursor_update_(uint16_t pos);
 void vga_cursor_update(const struct cursor crs);
-struct cursor* get_cursor_position(struct cursor* crs);
-void inc_cursor(int pos);
-
+struct cursor* vga_cursor_get_position(struct cursor* crs);
+void vga_cursor_inc(int pos);
 
 #endif

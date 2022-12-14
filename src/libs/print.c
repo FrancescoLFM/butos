@@ -3,63 +3,52 @@
 #include <include/asm.h>
 #include <stdarg.h>
 
-static int putc_internal(uint8_t color, char c)
-{
-    int disp = 0;
+#define MIN_BASE    2
+#define MAX_BASE    16
 
+static char* digits = "0123456789abcdef";
+
+void putc(uint8_t color, char c)
+{
     switch (c) {
     case '\n':
-        if (vga_newline())
-            disp += VGA_COLS;
+        vga_newline();
         __fallthrough;
     
     case '\r':
-        return disp - vga_allign_left();
+        vga_allign_left();
+        break;
 
     case '\b':
-        if (!vga_inc_pointer(-1))
-            return 0;
+        if (!vga_pointer_inc(-1))
+            break;
         vga_write(color, ' ');
-        return -1;
+        break;
     
     case '\t':
-        return vga_tab();
+        vga_tab();
+        break;
 
     case 0:
-        return 0;
+        break;
     
     default:
         vga_write(color, c);
-        return vga_inc_pointer(1);
+        vga_pointer_inc(1);
+        break;
     }
 
-    return 0;
-}
-
-int putc(uint8_t color, char c)
-{
-    int relpos;
-
-    if (!c)
-        return 0;
-    
-    relpos = putc_internal(color, c);
-    inc_cursor(relpos);
-
-    return relpos;
+    return;
 }
 
 int print_pm(uint8_t color, char* string)
 {
     int count = 0;
-    int relpos = 0;
 
     while (*string) {
-        relpos += putc_internal(color, *string++);
+        putc(color, *string++);
         count++;
     }
-
-    inc_cursor(relpos);
 
     return count;
 }
@@ -68,10 +57,6 @@ int puts(char* str)
 {
     return print_pm(STD_COLOR, str);
 }
-
-static char* digits = "0123456789abcdef";
-#define MIN_BASE    2
-#define MAX_BASE    16
 
 static int base_convert_r(char *buffer, size_t size, uint32_t num, uint32_t base)
 {
@@ -177,6 +162,7 @@ int printk(uint8_t color, char *str, ...)
         if (is_signed && (int32_t)num < 0)
             putc(color, '-');
         print_pm(color, buffer);
+        
         read++;
     }
 

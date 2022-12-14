@@ -21,13 +21,22 @@ void vga_open()
     vga_cursor_enable(13, 14);
 }
 
-int vga_inc_pointer(int pos)
+void vga_pointer_set(struct vga_char *address)
 {
+    if (!IN_BOUNDS(MIN_VID-1, address, MAX_VID))
+        return;
+    
+    vga_pointer = address;
+    vga_cursor_update_(address - VGA_TEXT_START);
+}
 
+int vga_pointer_inc(int pos)
+{
     if (!IN_BOUNDS(MIN_VID-1, vga_pointer + pos, MAX_VID))
         pos = 0;
     
     vga_pointer += pos;
+    vga_cursor_inc(pos);
 
     return pos;
 }
@@ -42,7 +51,7 @@ int vga_newline()
 {
     int pos;
     
-    pos = vga_inc_pointer(VGA_COLS);
+    pos = vga_pointer_inc(VGA_COLS);
     if (pos == 0)
         vga_scroll_down();
     
@@ -56,11 +65,10 @@ int vga_allign_left()
     
     temp = (uint32_t)(vga_pointer - VGA_TEXT_START);
     mod = temp % VGA_COLS;
-    temp -= mod;
 
-    vga_pointer = VGA_TEXT_START + temp;
+    vga_pointer_inc(-mod);
     
-    return mod;
+    return -mod;
 }
 
 int vga_tab()
@@ -72,7 +80,7 @@ int vga_tab()
     tab_size = VGA_COLS / 8;
     mod = (vga_pointer - VGA_TEXT_START) % tab_size;
     
-    return vga_inc_pointer(tab_size - mod);
+    return vga_pointer_inc(tab_size - mod);
 }
 
 void vga_scroll_down()
@@ -123,7 +131,7 @@ void vga_cursor_enable(uint8_t cursor_start, uint8_t cursor_end)
     vga_register_write((old & ~(CURSOR_SCAN_LINE_END)) | cursor_end);
 }
 
-static void vga_cursor_update_(uint16_t pos)
+void vga_cursor_update_(uint16_t pos)
 {
     vga_register_select(VGA_CURSOR_LOCATION_LOW_REGISTER);
     vga_register_write((uint8_t)(LOW_OFFSET(pos)));
@@ -138,7 +146,7 @@ void vga_cursor_update(const struct cursor crs)
 	vga_cursor_update_(pos);
 }
 
-static uint16_t vga_cursor_get_position_()
+uint16_t vga_cursor_get_position_()
 {
     uint16_t pos = 0;
 
@@ -150,7 +158,7 @@ static uint16_t vga_cursor_get_position_()
     return pos;
 }
 
-struct cursor* get_cursor_position(struct cursor* crs)
+struct cursor* vga_cursor_get_position(struct cursor* crs)
 {
     uint16_t pos = vga_cursor_get_position_();
 
@@ -160,7 +168,7 @@ struct cursor* get_cursor_position(struct cursor* crs)
     return crs;
 }
 
-void inc_cursor(int pos)
+void vga_cursor_inc(int pos)
 {
     vga_cursor_update_(vga_cursor_get_position_() + pos);
 }

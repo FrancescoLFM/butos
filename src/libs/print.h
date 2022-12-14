@@ -6,7 +6,7 @@
 
 int print_pm(uint8_t color, char* string);
 int puts(char* string);
-int putc(uint8_t color, char c);
+void putc(uint8_t color, char c);
 int printk(uint8_t color, char *str, ...);
 
 #endif
