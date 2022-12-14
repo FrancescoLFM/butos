@@ -1,6 +1,8 @@
 # Butos - a boot capable bare metal program 
 Butos is a **bare metal program** that aspires to be a **framework** for other programs that want to run without an operating system directly in kernel mode. So the ultimate goal is to be able to make it possible to **run other bare metal software**.
 
+![image](https://user-images.githubusercontent.com/71092108/207572261-ea34a7fa-5614-4771-9cf7-a62fa5e89594.png)
+
 ## Project structure
 
 ```
