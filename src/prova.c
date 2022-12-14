@@ -16,7 +16,7 @@ void _start()
 
 
     for (int i = 0; i < VGA_ROWS; i++) {
-        printk(STD_COLOR, "%d", i);
+        printk(RED, "%d", i);
         if (i+1 < VGA_ROWS) putc(STD_COLOR, '\n');
     }
 

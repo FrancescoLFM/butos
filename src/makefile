@@ -54,6 +54,7 @@ $(NAME).out: $(OBJ)
 
 $(TARGET): $(NAME).out
 	@printf "\n[BUTOS] Compilazione terminata\n\n"
+	-mkdir $(BINDIR)
 	objcopy	-O binary -S $^ $@
 	$(DBGGEN) $^
 	$(CONFIGURE) $@ $(CONFDIR)

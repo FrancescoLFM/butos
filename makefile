@@ -21,12 +21,14 @@ all: $(TARGET)
 
 $(TARGET): $(BINFILE)
 	@printf "\n[UPDATE] Generazione del disco avviabile\n\n"
-	qemu-img create -f $(FORMAT) $(IMG) $(SIZE)
-	$(DD) if=$^ of=$(IMG)
+	-mkdir $(QEMUDIR)
+	qemu-img create -f $(FORMAT) $@ $(SIZE)
+	$(DD) if=$^ of=$@
 
 
 $(BINFILE): $(ISO) $(INIT)
 	@printf "\n[UPDATE] Generazione dell'eseguibile complessivo\n\n"
+	-mkdir bin
 	$(DD) seek=0 bs=512 count=1 conv=notrunc if=$(INIT) of=$@
 	$(DD) seek=1 bs=512 conv=notrunc if=$(ISO) of=$@
 
