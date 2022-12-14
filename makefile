@@ -25,7 +25,7 @@ $(TARGET): $(BINFILE)
 	$(DD) if=$^ of=$(IMG)
 
 
-$(BINFILE): $(INIT) $(ISO)
+$(BINFILE): $(ISO) $(INIT)
 	@printf "\n[UPDATE] Generazione dell'eseguibile complessivo\n\n"
 	$(DD) seek=0 bs=512 count=1 conv=notrunc if=$(INIT) of=$@
 	$(DD) seek=1 bs=512 conv=notrunc if=$(ISO) of=$@
@@ -40,10 +40,10 @@ $(ISO):
 
 .PHONY=clean
 clean:
-	@printf "[UPDATE] Pulizia dei file di compilazione nel bootloader\n\n"
-	make -C $(INITDIR) clean
 	@printf "\n[UPDATE] Pulizia dei file di compilazione nel kernel\n\n"
 	make -C $(ISODIR) clean
+	@printf "[UPDATE] Pulizia dei file di compilazione nel bootloader\n\n"
+	make -C $(INITDIR) clean
 	@printf "\n[UPDATE] Rimozione del disco generato\n\n"
 	rm $(TARGET)
 	rm $(BINFILE)
