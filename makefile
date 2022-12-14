@@ -1,44 +1,52 @@
 DD		= dd
 
 INITDIR	= init
-ISODIR	= src/butos
+ISODIR	= src
 
 INIT  	= $(INITDIR)/boot.bin
-ISO		= $(ISODIR)/butos.bin
+ISO		= $(ISODIR)/butos/butos.bin
 
 BINDIR	= bin
-TARGET	= $(BINDIR)/boot.bin
+BINFILE	= $(BINDIR)/boot.bin
 
 QEMUDIR = qemu
 IMG		= $(QEMUDIR)/vhdd.img
+TARGET	= $(IMG)
 FORMAT	= raw
 SIZE	= 100M
 VMARGS	= -device piix3-ide,id=ide -drive id=disk,file=$(IMG),format=raw,if=none -device ide-hd,drive=disk,bus=ide.0
 
 .PHONY=all
-all:
-	make $(INIT)
-	make $(ISO)
-	make $(TARGET)
+all: $(TARGET)
 
-$(TARGET): $(ISO) $(INIT)
+$(TARGET): $(BINFILE)
+	@printf "\n[UPDATE] Generazione del disco avviabile\n\n"
+	qemu-img create -f $(FORMAT) $(IMG) $(SIZE)
+	$(DD) if=$^ of=$(IMG)
+
+
+$(BINFILE): $(INIT) $(ISO)
+	@printf "\n[UPDATE] Generazione dell'eseguibile complessivo\n\n"
 	$(DD) seek=0 bs=512 count=1 conv=notrunc if=$(INIT) of=$@
 	$(DD) seek=1 bs=512 conv=notrunc if=$(ISO) of=$@
-	qemu-img create -f $(FORMAT) $(IMG) $(SIZE)
-	$(DD) if=bin/boot.bin of=$(IMG)
 
 $(INIT):
+	@printf "[UPDATE] Compilazione del bootloader in real mode\n\n"
 	make -C $(INITDIR)
 
 $(ISO):
+	@printf "\n[UPDATE] Compilazione del kernel butos\n\n"
 	make -C $(ISODIR)
 
 .PHONY=clean
 clean:
+	@printf "[UPDATE] Pulizia dei file di compilazione nel bootloader\n\n"
 	make -C $(INITDIR) clean
+	@printf "\n[UPDATE] Pulizia dei file di compilazione nel kernel\n\n"
 	make -C $(ISODIR) clean
+	@printf "\n[UPDATE] Rimozione del disco generato\n\n"
 	rm $(TARGET)
-	rm $(IMG)
+	rm $(BINFILE)
 
 .PHONY=run
 run:

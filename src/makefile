@@ -7,30 +7,31 @@ AS			= as
 ASFLAGS 	= -march=i386 --32
 
 # Cartelle
-PROGDIR		= ..
+PROGDIR		= .
+BINDIR		= $(PROGDIR)/butos
 LIBDIR		= $(PROGDIR)/libs
 LIBCPUDIR	= $(PROGDIR)/cpu
 DRIVERSDIR  = $(PROGDIR)/drivers
-SCRIPTDIR 	= ../$(PROGDIR)/scripts
-CONFDIR		= ../$(PROGDIR)/conf
+SCRIPTDIR 	= ../scripts
+CONFDIR		= ../conf
 
 CFLAGS 	   += -I$(PROGDIR)/
 
 # File oggetto
-OBJ			= prova.o
+OBJ			= $(PROGDIR)/prova.o
 OBJ		   += $(LIBCPUDIR)/idt.o $(LIBCPUDIR)/isr.o $(LIBCPUDIR)/pic.o
 OBJ		   += $(LIBDIR)/print.o $(LIBDIR)/string.o $(LIBDIR)/array.o
 OBJ		   += $(DRIVERSDIR)/pci.o $(DRIVERSDIR)/ide.o $(DRIVERSDIR)/keyboard.o $(DRIVERSDIR)/vga.o
 
 
 NAME		= butos
-TARGET		= $(NAME).bin
-LDSCRIPT	= $(NAME).ld
+TARGET		= $(BINDIR)/$(NAME).bin
+LDSCRIPT	= $(PROGDIR)/$(NAME).ld
 CONFIGURE	= $(SCRIPTDIR)/configure.sh
 
 DBG			= gdb
 DBGGEN		= $(SCRIPTDIR)/debug_gen.sh
-DGBSYM		= $(NAME).out.debug
+DGBSYM		= $(PROGDIR)/$(NAME).out.debug
 DGBSCR		= $(SCRIPTDIR)/butos.gdb
 
 .PHONY=all
@@ -52,9 +53,11 @@ $(NAME).out: $(OBJ)
 	$(LD) $^ -o $@ -T $(LDSCRIPT) --ignore-unresolved-symbol _GLOBAL_OFFSET_TABLE_ 
 
 $(TARGET): $(NAME).out
+	@printf "\n[BUTOS] Compilazione terminata\n\n"
 	objcopy	-O binary -S $^ $@
 	$(DBGGEN) $^
 	$(CONFIGURE) $@ $(CONFDIR)
+	@printf "\n[BUTOS] Generazione del sorgente terminata\n\n"
 	rm $^
 
 .PHONY=debug
