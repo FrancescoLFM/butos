@@ -23,7 +23,7 @@ butos/
     - `libs`: contains **assembly libraries** with useful *functions* for bootloader operation
 - `src`: contains the C code of the 32-bit **butos kernel**
     - `include`: contains some **macros** which can be useful throughout the project
-    - `butos`: contains the **module testing** functions and the **start** function of butos
+    - `butos`: contains the **binary** executable of butos
     - `cpu`: contains **drivers** to handle interrupts and other **cpu features**
     - `drivers`: contains **drivers** for **hardware** components accessible via the system bus
     - `libs`: contains the implementation of globally useful **libraries** in the project
