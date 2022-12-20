@@ -14,7 +14,7 @@ IMG		= $(QEMUDIR)/vhdd.img
 TARGET	= $(IMG)
 FORMAT	= raw
 SIZE	= 100M
-VMARGS	= -device piix3-ide,id=ide -drive id=disk,file=$(IMG),format=raw,if=none -device ide-hd,drive=disk,bus=ide.0
+VMARGS	= -device piix3-ide,id=ide -drive id=disk,file=$(IMG),format=raw,if=none -device ide-hd,drive=disk,bus=ide.0 -m 2G
 
 .PHONY=all
 all: $(TARGET)

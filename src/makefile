@@ -18,10 +18,10 @@ CONFDIR		= ../conf
 CFLAGS 	   += -I$(PROGDIR)/
 
 # File oggetto
-OBJ			= $(PROGDIR)/prova.o
+OBJ			= $(PROGDIR)/startk.o $(PROGDIR)/test.o
 OBJ		   += $(LIBCPUDIR)/idt.o $(LIBCPUDIR)/isr.o $(LIBCPUDIR)/pic.o
 OBJ		   += $(LIBDIR)/print.o $(LIBDIR)/string.o $(LIBDIR)/array.o
-OBJ		   += $(DRIVERSDIR)/pci.o $(DRIVERSDIR)/ide.o $(DRIVERSDIR)/keyboard.o $(DRIVERSDIR)/vga.o
+OBJ		   += $(DRIVERSDIR)/pci.o $(DRIVERSDIR)/ata.o $(DRIVERSDIR)/keyboard.o $(DRIVERSDIR)/vga.o
 
 
 NAME		= butos

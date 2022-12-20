@@ -1,14 +1,4 @@
-#ifndef IDE_H
-#define IDE_H
-
 #include <include/def.h>
-#include <drivers/pci.h>
-
-// See drive prog if...
-
-#define C1_NATIVE_MODE          0x01     // Channel 1 native mode
-#define C2_NATIVE_MODE          0x04     // Channel 2 native mode
-#define BUS_MASTER_IDE          0x80     
 
 // ERRORS
 
@@ -61,16 +51,17 @@
 #define ATA_REG_COMMAND         0x07
 #define ATA_REG_STATUS          0x07
 #define ATA_REG_SECCOUNT1       0x08
-#define ATA_REG_LBA3            0x09
-#define ATA_REG_LBA4            0x0A
-#define ATA_REG_LBA5            0x0B
-#define ATA_REG_CONTROL         0x0C
-#define ATA_REG_ALTSTATUS       0x0C
+#define ATA_REG_CONTROL         0x00
+#define ATA_REG_ALTSTATUS       0x00
 #define ATA_REG_DEVADDRESS      0x0D
 
 // Channels:
 #define ATA_PRIMARY             0x00
+#define ATA_PRIMARY_BASE        0x1F0
+#define ATA_PRIMARY_CTRL        0x3F6
 #define ATA_SECONDARY           0x01
+#define ATA_SECONDARY_BASE      0x170
+#define ATA_SECONDARY_CTRL      0x376
 
 #define ATA_IDENT_WORDS         256
 #define ATA_IDENT_MODEL         27
@@ -81,46 +72,58 @@
 #define ATA_READ                0x00
 #define ATA_WRITE               0x01
 
+#define ATA_SECTOR_SIZE         256
+
 #define LBA_LOW(LBA)            (uint8_t) (LBA & 0xFF)
 #define LBA_MID(LBA)            (uint8_t) ((LBA & 0xFF00) >> 8)
 #define LBA_HIGH(LBA)           (uint8_t) ((LBA & 0xFF0000) >> 16)
 #define LBA_END(LBA)            (uint8_t) ((LBA & 0xFF000000) >> 24)
 
-struct ide_channel
+#define SETUP_HDDSEL_PIO(    \
+                    HAS_LBA, \
+                    LBA,     \
+                    DRIVE)      (LBA_END(LBA) + (HAS_LBA << 6) + (DRIVE->drive_n << 4))
+
+#define DEBUG
+
+struct ata_channel
 {
     uint16_t base;
     uint16_t ctrl;
     uint16_t bus_master;
-    uint8_t no_int;
 };
 
-struct ide_device
+struct ata_drive
 {
+    struct ata_channel *channel;
     uint16_t ident_buffer[ATA_IDENT_WORDS];
-    struct ide_channel channels[2];
+    uint8_t drive_n; // 0: Master drive, 1: Slave drive
     uint8_t nIEN;
 };
 
-void ide_channels_init(struct pci_device_info *pci_dev, struct ide_channel ide_channels[2]);
 
-void ide_device_init(struct pci_device_info *pci_dev, struct ide_device *ide_dev);
+void ata_channels_init(struct ata_channel *channel_ptr, uint8_t channel_n);
 
-uint16_t ide_read(struct ide_device *ide_dev, uint8_t reg, uint8_t channel_n);
+void ata_drive_init(struct ata_drive *drive_ptr, uint8_t channel_n, uint8_t drive_n);
 
-void ide_write(struct ide_device *ide_dev, uint8_t reg, uint8_t channel_n, uint8_t data);
+uint16_t ata_read(struct ata_drive *drive_ptr, uint8_t reg);
 
-void print_ide_device_error(struct ide_device *ide_dev, uint8_t channel_n);
+void ata_write(struct ata_drive *drive_ptr, uint8_t reg, uint8_t data);
 
-void print_ide_device_status(struct ide_device *ide_dev, uint8_t channel_n); 
+void ata_select_drive(struct ata_drive *drive_ptr);
 
-void ide_device_get_model(struct ide_device *ide_dev, char *buffer);
+void ata_switch_int(struct ata_drive *drive_ptr);
 
-void ide_switch_nIEN(struct ide_device *ide_dev, uint8_t channel);
+void ata_read_ident_buffer(struct ata_drive *drive_ptr);
 
-void ide_drive_read_pio(struct ide_device *ide_dev, uint8_t sectors, uint32_t lba, uint8_t channel);
+void ata_drive_get_model(struct ata_drive *drive_ptr, uint8_t buff[ATA_IDENT_MODEL_LEN]);
 
-uint8_t ide_device_has_lba(struct ide_device *ide_dev);
+void ata_drive_access_pio(struct ata_drive *drive_ptr, uint8_t direction, uint8_t sector_n, uint32_t lba, uint16_t *buff);
 
-void ide_string_sec_seek(struct ide_device *ide_dev, char *str, uint8_t channel_n, uint32_t offset);
+void ata_drive_read_pio(struct ata_drive *drive_ptr, uint8_t sector_n, uint32_t lba, uint16_t *buff);
 
-#endif
+void ata_drive_print_status(struct ata_drive *drive_ptr);
+
+void ata_drive_print_error(struct ata_drive *drive_ptr);
+
+void ata_drive_wait(struct ata_drive *drive_ptr);

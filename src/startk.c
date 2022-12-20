@@ -7,6 +7,7 @@
 
 void vga_open();
 void vga_scroll_down();
+void test_ata();
 
 void _start()
 {
@@ -14,11 +15,7 @@ void _start()
     init_kb();
     vga_open();
 
-
-    for (int i = 0; i < VGA_ROWS; i++) {
-        printk(RED, "%d", i);
-        if (i+1 < VGA_ROWS) putc(STD_COLOR, '\n');
-    }
+    test_ata();
 
     stop();
 }
