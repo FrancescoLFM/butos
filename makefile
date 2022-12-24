@@ -13,7 +13,7 @@ QEMUDIR = qemu
 IMG		= $(QEMUDIR)/vhdd.img
 TARGET	= $(IMG)
 FORMAT	= raw
-SIZE	= 100M
+SIZE	= 21K
 VMARGS	= -device piix3-ide,id=ide -drive id=disk,file=$(IMG),format=raw,if=none -device ide-hd,drive=disk,bus=ide.0 -m 2G
 
 .PHONY=all
@@ -23,7 +23,7 @@ $(TARGET): $(BINFILE)
 	@printf "\n[UPDATE] Generazione del disco avviabile\n\n"
 	-mkdir $(QEMUDIR)
 	qemu-img create -f $(FORMAT) $@ $(SIZE)
-	$(DD) if=$^ of=$@
+	$(DD) if=$^ of=$@ conv=notrunc
 
 
 $(BINFILE): $(ISO) $(INIT)

@@ -53,7 +53,7 @@
 #define ATA_REG_SECCOUNT1       0x08
 #define ATA_REG_CONTROL         0x00
 #define ATA_REG_ALTSTATUS       0x00
-#define ATA_REG_DEVADDRESS      0x0D
+#define ATA_REG_DEVADDRESS      0x01
 
 // Channels:
 #define ATA_PRIMARY             0x00
@@ -84,7 +84,7 @@
                     LBA,     \
                     DRIVE)      (LBA_END(LBA) + (HAS_LBA << 6) + (DRIVE->drive_n << 4))
 
-#define DEBUG
+// #define DEBUG
 
 struct ata_channel
 {
@@ -108,7 +108,11 @@ void ata_drive_init(struct ata_drive *drive_ptr, uint8_t channel_n, uint8_t driv
 
 uint16_t ata_read(struct ata_drive *drive_ptr, uint8_t reg);
 
+uint8_t ata_read_ctrl(struct ata_drive *drive_ptr, uint8_t reg);
+
 void ata_write(struct ata_drive *drive_ptr, uint8_t reg, uint8_t data);
+
+void ata_write_ctrl(struct ata_drive *drive_ptr, uint8_t reg, uint8_t data);
 
 void ata_select_drive(struct ata_drive *drive_ptr);
 
@@ -125,5 +129,7 @@ void ata_drive_read_pio(struct ata_drive *drive_ptr, uint8_t sector_n, uint32_t 
 void ata_drive_print_status(struct ata_drive *drive_ptr);
 
 void ata_drive_print_error(struct ata_drive *drive_ptr);
+
+void ata_drive_delay(struct ata_drive *drive_ptr);
 
 void ata_drive_wait(struct ata_drive *drive_ptr);
