@@ -145,10 +145,8 @@ void ata_drive_access_pio(struct ata_drive *drive_ptr, uint8_t direction, uint8_
             ata_drive_wait(drive_ptr);
             
             rw_val = ata_read(drive_ptr, ATA_REG_DATA);
-            buff[i] = (uint8_t) (rw_val >> 8);
-            i += 1;
-            buff[i] = (uint8_t) (rw_val & 0xFF);
-            i += 1;
+            buff[i++] = (uint8_t) (rw_val >> 8);
+            buff[i++] = (uint8_t) (rw_val & 0xFF);
         } while (i < buff_len);
     }
     else if (direction == ATA_WRITE) {
@@ -163,10 +161,8 @@ void ata_drive_access_pio(struct ata_drive *drive_ptr, uint8_t direction, uint8_
         do {
             ata_drive_wait(drive_ptr);
             
-            rw_val = (uint16_t) (buff[i]) << 8;
-            i += 1;
-            rw_val |= buff[i];
-            i += 1;
+            rw_val = (uint16_t) (buff[i++]) << 8;
+            rw_val |= buff[i++];
             ata_write_word(drive_ptr, ATA_REG_DATA, rw_val);
         } while (i < buff_len);
 
