@@ -2,9 +2,9 @@
 #include <libs/print.h>
 #include <libs/string.h>
 
-#define BUTOS_SECTORS   0x1e
-#define SECTOR_SELECTED 3
-#define WORD_PER_ROW    15
+#define BUTOS_SECTORS   0x1d
+#define SECTOR_SELECTED 0x1f
+#define WORD_PER_ROW    23
 
 void test_ata()
 {
@@ -12,24 +12,22 @@ void test_ata()
     struct ata_drive ata_drive_dummy;
     struct ata_drive *ata_drive_ptr = &ata_drive_dummy;
 
-    uint16_t *sector_buff = (uint16_t *)(0x2000000);
+    uint8_t *sector_buff = (uint8_t *)(0x2000000);
     for (int i=0; i < BUTOS_SECTORS * ATA_SECTOR_SIZE; i++)
         sector_buff[i] = 0;
 
     ata_drive_init(ata_drive_ptr, 0, 0);
 
-    //sector_buff[1] = 'C';
+    strcpy((char *)sector_buff, "Buon natale da butos");
 
-    //ata_drive_access_pio(ata_drive_ptr, ATA_WRITE, 1, SECTOR_SELECTED, sector_buff);
+    ata_drive_write_pio(ata_drive_ptr, 1, SECTOR_SELECTED, sector_buff);
 
-    ata_drive_print_status(ata_drive_ptr);
-
-    ata_drive_read_pio(ata_drive_ptr, BUTOS_SECTORS, 1, sector_buff);
+    ata_drive_read_pio(ata_drive_ptr, SECTOR_SELECTED, 1, sector_buff);
 
     printk(STD_COLOR, "Sector %d: \n", SECTOR_SELECTED);
 
     for (uint32_t i=(ATA_SECTOR_SIZE * (SECTOR_SELECTED - 1)); i < ATA_SECTOR_SIZE * SECTOR_SELECTED; i++) {
-        printk(STD_COLOR, "%x ", sector_buff[i]);
+        putc(STD_COLOR, sector_buff[i]);
         
         if (++words_readed == WORD_PER_ROW) {
             words_readed = 0;
@@ -38,7 +36,5 @@ void test_ata()
     }
 
     putc(STD_COLOR, '\n');
-
-    ata_drive_print_status(ata_drive_ptr);
 
 }

@@ -72,7 +72,7 @@
 #define ATA_READ                0x00
 #define ATA_WRITE               0x01
 
-#define ATA_SECTOR_SIZE         256
+#define ATA_SECTOR_SIZE         512
 
 #define LBA_LOW(LBA)            (uint8_t) (LBA & 0xFF)
 #define LBA_MID(LBA)            (uint8_t) ((LBA & 0xFF00) >> 8)
@@ -112,6 +112,8 @@ uint8_t ata_read_ctrl(struct ata_drive *drive_ptr, uint8_t reg);
 
 void ata_write(struct ata_drive *drive_ptr, uint8_t reg, uint8_t data);
 
+void ata_write_word(struct ata_drive *drive_ptr, uint8_t reg, uint16_t data);
+
 void ata_write_ctrl(struct ata_drive *drive_ptr, uint8_t reg, uint8_t data);
 
 void ata_select_drive(struct ata_drive *drive_ptr);
@@ -122,9 +124,11 @@ void ata_read_ident_buffer(struct ata_drive *drive_ptr);
 
 void ata_drive_get_model(struct ata_drive *drive_ptr, uint8_t buff[ATA_IDENT_MODEL_LEN]);
 
-void ata_drive_access_pio(struct ata_drive *drive_ptr, uint8_t direction, uint8_t sector_n, uint32_t lba, uint16_t *buff);
+void ata_drive_access_pio(struct ata_drive *drive_ptr, uint8_t direction, uint8_t sector_n, uint32_t lba, uint8_t *buff);
 
-void ata_drive_read_pio(struct ata_drive *drive_ptr, uint8_t sector_n, uint32_t lba, uint16_t *buff);
+void ata_drive_read_pio(struct ata_drive *drive_ptr, uint8_t sector_n, uint32_t lba, uint8_t *buff);
+
+void ata_drive_write_pio(struct ata_drive *drive_ptr, uint8_t sector_n, uint32_t lba, uint8_t *buff);
 
 void ata_drive_print_status(struct ata_drive *drive_ptr);
 
