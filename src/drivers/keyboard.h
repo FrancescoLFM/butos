@@ -24,10 +24,19 @@
 #define RIGHT_SHIFT_KEY     0x36
 #define CAPS_LOCK_KEY       0x3A
 #define LEFT_CONTROL_KEY    0x1D
+#define ALT_KEY             0x38
 
 /* extended ctrl scancodes */
 
 #define RIGHT_CONTROL_KEY   0x1D
+#define MOD_KEY             0X5B
+#define ALTGR_KEY           0x38
+
+/* Arrows (extended) */
+#define UP_ARROW_KEY        0x48
+#define RIGHT_ARROW_KEY     0x4D
+#define LEFT_ARROW_KEY      0x4B
+#define DOWN_ARROW_KEY      0x50
 
 void keyboard_start();
 

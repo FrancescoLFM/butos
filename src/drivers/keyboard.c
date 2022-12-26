@@ -1,12 +1,17 @@
 #include <cpu/idt.h>
 #include <libs/print.h>
+#include <libs/string.h>
 #include <drivers/keyboard.h>
 
 #include <include/asm.h>
 #include <include/def.h>
 #include <include/trigger.h>
 
+#define EXTENDED_SCANCODE         0xE0
 #define RELEASED(SCAN)            ((SCAN) | RELEASED_KEY)
+#define UNRELEASED(SCAN)          ((SCAN) & ~RELEASED_KEY)
+
+#define IN_ARRAY(ELEM, ARRAY)  (memchr((ARRAY), (ELEM), sizeof(ARRAY)) != NULL)
 
 /**
  * Object keyboard
@@ -18,36 +23,67 @@
 struct keyboard {
     uint8_t *std_table;
     uint8_t *shift_table;
-    uint8_t *ctrl_table;
-    uint8_t *ctrl_alt_table;
     uint8_t *altgr_table;
+
+    uint8_t *selected;
+    flag_t caps_lock;
 };
 
-static
-uint8_t NORMAL_KEYS_C[] = {
-    '\0','\0','1','2','3','4','5','6','7','8','9','0','-','=','\x08','\t','q','w','e','r','t','y','u',
-    'i','o','p','[',']','\n','\0','a','s','d','f','g','h','j','k','l',';','\'','`','\0','\\','z','x',
-    'c','v','b','n','m',',','.','/','\0','*','\0',' ','\0','\0','\0','\0','\0','\0','\0','\0','\0',
-    '\0','\0','\0','\0','7','8','9','-','4','5','6','+','1','2','3','\0','.','\0','\0','\0','\0','\0'
+uint8_t STANDARD_KEYS[] = {
+    0, 0, '1', '2', '3', '4', '5', '6', '7', '8', '9','0', '\'', 'i', '\x08',
+    '\t', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', 'e', '+', '\n', 0,
+    'a', 's', 'd', 'f', 'g', 'h', 'i', 'k', 'l', 'o', 'a', '\\', 0, 'u', 'z',
+    'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '-', 0, 0, 0, ' ', 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '<', 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
-static
-uint8_t SHIFT_KEYS_C[] = {
-    '\0','\0','!','@','#','$','%','^','&','*','(',')','-','+',',','\t', 'Q','W','E','R','T','Y','U','I',
-    'O','P','{','}','\0','\0','A','S','D','F','G','H','J','K','L',';', '"','\0','\0','|','Z','X','C','V',
-    'B','N','M','<','>','?','\0','*','\0',' ','\0','\0','\0','\0','\0','\0', '\0','\0','\0','\0','\0','\0',
-    '\0','\0','\0','\0','-','\0','\0','\0','+','\0','\0','\0','\0','\0','\0'
+uint8_t SHIFT_KEYS[] = {
+    0, 0, '!', '"', 0, '$', '%', '&', '/', '(', ')', '=', '?', '^', '\x08',
+    '\t', 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', 'e', '*', '\n', 0,
+    'A', 'S', 'D', 'F', 'G', 'H', 'I', 'K', 'L', 'o', 'a', '|', 0, 'u', 'Z',
+    'X', 'C', 'V', 'B', 'N', 'M', ';', ':', '_', 0, 0, 0, ' ', 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '>', 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+};
+
+uint8_t ALTGR_KEYS[] = {
+    0, 0, '1', '2', '3', '4', '5', '6', '{', '[', ']', '}', '`', '~', '\x08',
+    '\t', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n', 0,
+    'a', 's', 'd', 'f', 'g', 'h', 'i', 'k', 'l', '@', '#', '\\', 0, 'u', 'z',
+    'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '-', 0, 0, 0, ' ', 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '<', 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
 /**
  * Default keyboard
  */
 struct keyboard std_keyboard = {
-    .std_table = NORMAL_KEYS_C,
-    .shift_table = SHIFT_KEYS_C,
-    .ctrl_table = NULL,
-    .ctrl_alt_table = NULL,
-    .altgr_table = NULL,
+    .std_table = STANDARD_KEYS,
+    .shift_table = SHIFT_KEYS,
+    .altgr_table = ALTGR_KEYS,
+
+    .selected = STANDARD_KEYS,
+    .caps_lock = 0
 };
 
 struct keyboard *current_keyboard = &std_keyboard;
@@ -72,55 +108,86 @@ uint16_t keyboard_get_scancode()
     return scan;
 }
 
+/**
+ * Selects the current table of characters from
+ * the ones in the keyboard object
+ */
 static
-char keyboard_get_ascii(struct keyboard *keyboard, uint8_t scan)
+void keyboard_change_table(struct keyboard *keyboard, uint8_t scan, int ext)
 {
-    static uint8_t *current_table = NULL;
-
-    switch (scan) {
-    case RIGHT_SHIFT_KEY:
-    case LEFT_SHIFT_KEY:
-        current_table = keyboard->shift_table;
-        break;
-    
-    /* implement other key combinations */
-    
-    /* put here in fallthrough all the release combinations */
-    case (RIGHT_SHIFT_KEY | RELEASED_KEY):
-    case (LEFT_SHIFT_KEY | RELEASED_KEY):
-        current_table = keyboard->std_table;
-        break;
+    if (!ext) switch (scan) {
+        case RIGHT_SHIFT_KEY:
+        case LEFT_SHIFT_KEY:
+            keyboard->selected = keyboard->shift_table;
+            break;
+        
+        case CAPS_LOCK_KEY:
+            keyboard->caps_lock ^= 1;
+            break;
+        
+        /* altri tasti  standard */
+    } else switch (scan) {
+        case ALTGR_KEY:
+            keyboard->selected = keyboard->altgr_table;
+            break;
+        
+        /* altri tasti estesi */
     }
 
     if (scan & RELEASED_KEY)
-        return 0;
+        keyboard->selected = keyboard->caps_lock ? 
+            keyboard->shift_table : keyboard->std_table;
+}
 
-    if (current_table == NULL)
-        current_table = keyboard->std_table; /* std_table can never be NULL */
+static
+uint8_t keyboard_read_character(struct keyboard *keyboard, uint8_t scan)
+{
+    if (scan & RELEASED_KEY)
+        return 0;
     
-    return current_table[scan];
+    if (keyboard->selected)
+        return keyboard->selected[scan];
+    return keyboard->std_table[scan];
 }
 
 void keyboard_handler(struct registers_t *regs)
 {
     uint8_t scan;
     char chr;
+    int ext;
+
     (void) regs;    /* needed for irq */
 
-    /*static const uint8_t CTRL_SCANCODES[] = {
-        LEFT_SHIFT_KEY, RIGHT_SHIFT_KEY, CAPS_LOCK_KEY, LEFT_CONTROL_KEY
+    static const uint8_t CTRL_SCANCODES[] = {
+        LEFT_SHIFT_KEY, RIGHT_SHIFT_KEY, CAPS_LOCK_KEY, LEFT_CONTROL_KEY,
+        ALT_KEY
     };
 
     static const uint8_t EXTENDED_CTRL_SCANCODES[] = {
-        RIGHT_CONTROL_KEY
-    };*/
+        RIGHT_CONTROL_KEY, MOD_KEY, ALTGR_KEY, UP_ARROW_KEY, RIGHT_ARROW_KEY,
+        LEFT_ARROW_KEY, DOWN_ARROW_KEY
+    };
+
+    ext = trigger_is_set(&extended);
 
     scan = keyboard_get_scancode();
+    if (scan == EXTENDED_SCANCODE) {  /* extended */
 
-    chr = keyboard_get_ascii(current_keyboard, scan);
+        trigger_set(&extended);
 
-    if (chr)
-        putc(STD_COLOR, chr);
+    } else if ((!ext && IN_ARRAY(UNRELEASED(scan), CTRL_SCANCODES)) ||
+        (ext && IN_ARRAY(UNRELEASED(scan), EXTENDED_CTRL_SCANCODES))) {
+        /* special keys */
+    
+        keyboard_change_table(current_keyboard, scan, ext);
+
+    } else {  /* normal keys */
+
+        chr = keyboard_read_character(current_keyboard, scan);
+        if (chr)
+            putc(STD_COLOR, chr);
+        
+    }
 }
 
 /**

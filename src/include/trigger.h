@@ -12,10 +12,10 @@ void trigger_set(trigger_t *trigger)
 static inline
 int trigger_is_set(trigger_t *trigger)
 {
-    if (!*trigger)
+    if (*trigger == 0)
         return 0;
     
-    trigger = 0;
+    *trigger = 0;
     return 1;
 }
 
