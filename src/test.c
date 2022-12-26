@@ -6,6 +6,19 @@
 #define SECTOR_SELECTED 3
 #define WORD_PER_ROW    15
 
+void test_string()
+{
+    int buffer[70] = {0};
+
+    for (int i = 0; i < 70; i++)
+        printk(STD_COLOR, "%x ", buffer[i]);
+    
+    memset(buffer, 19, sizeof(buffer));
+
+    for (int i = 0; i < 70; i++)
+        printk(BLUE | GREEN, "%x ", buffer[i]);
+}
+
 void test_ata()
 {
     uint8_t words_readed = 0;

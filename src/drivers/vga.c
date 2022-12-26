@@ -34,7 +34,7 @@ int vga_pointer_inc(int pos)
 {
     int quot, mod;
 
-    if (vga_pointer + pos <= VGA_TEXT_START)
+    if (vga_pointer + pos < VGA_TEXT_START)
         pos = 0;
 
     /* scrolling */

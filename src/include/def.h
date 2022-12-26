@@ -36,5 +36,4 @@ typedef unsigned char       u8;
 
 #define BIT(N)              (0x01 << (N)) 
 
-
 #endif

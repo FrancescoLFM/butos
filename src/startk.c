@@ -9,13 +9,15 @@ void vga_open();
 void vga_scroll_down();
 void test_ata();
 
+void test_string();
+
 void _start()
 {
     isr_install();
-    init_kb();
+    keyboard_start();
     vga_open();
 
-    test_ata();
+    test_string();
 
     stop();
 }
