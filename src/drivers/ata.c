@@ -59,6 +59,13 @@ void ata_write(struct ata_drive *drive_ptr, uint8_t reg, uint8_t data)
     return;
 }
 
+void ata_write_word(struct ata_drive *drive_ptr, uint8_t reg, uint16_t data)
+{
+    outw(drive_ptr->channel->base + reg, data);
+
+    return;
+}
+
 void ata_write_ctrl(struct ata_drive *drive_ptr, uint8_t reg, uint8_t data)
 {
     outb(drive_ptr->channel->ctrl + reg, data);
@@ -109,10 +116,11 @@ uint8_t ata_drive_has_lba(struct ata_drive *drive_ptr)
     return lba_bit;
 }
 
-void ata_drive_access_pio(struct ata_drive *drive_ptr, uint8_t direction, uint8_t sector_n, uint32_t lba, uint16_t *buff)
+void ata_drive_access_pio(struct ata_drive *drive_ptr, uint8_t direction, uint8_t sector_n, uint32_t lba, uint8_t *buff)
 {
     uint8_t has_lba;
     uint32_t i = 0;
+    uint16_t rw_val;
     uint32_t buff_len = sector_n * ATA_SECTOR_SIZE;
 
     has_lba = 1;
@@ -125,51 +133,60 @@ void ata_drive_access_pio(struct ata_drive *drive_ptr, uint8_t direction, uint8_
     ata_write(drive_ptr, ATA_REG_SECCOUNT0, sector_n);
 
     if (direction == ATA_READ) {
-
         #ifdef DEBUG
 
         printk(STD_COLOR, "Reading %d sectors at 0x%x\n", sector_n, lba);
         ata_drive_print_status(drive_ptr);
 
         #endif
-
         ata_write(drive_ptr, ATA_REG_COMMAND, ATA_CMD_READ_PIO);
 
         do {
             ata_drive_wait(drive_ptr);
-            buff[i++] = ata_read(drive_ptr, ATA_REG_DATA);
+            
+            rw_val = ata_read(drive_ptr, ATA_REG_DATA);
+            buff[i++] = (uint8_t) (rw_val >> 8);
+            buff[i++] = (uint8_t) (rw_val & 0xFF);
         } while (i < buff_len);
     }
-
-    //! BROKEN
     else if (direction == ATA_WRITE) {
-        
         #ifdef DEBUG
 
         printk(STD_COLOR, "Writing %d sectors at 0x%x\n", sector_n, lba);
         ata_drive_print_status(drive_ptr);
 
         #endif
-
         ata_write(drive_ptr, ATA_REG_COMMAND, ATA_CMD_WRITE_PIO);
 
         do {
             ata_drive_wait(drive_ptr);
-            ata_write(drive_ptr, ATA_REG_DATA, buff[i++]);
+            
+            rw_val = (uint16_t) (buff[i++]) << 8;
+            rw_val |= buff[i++];
+            ata_write_word(drive_ptr, ATA_REG_DATA, rw_val);
         } while (i < buff_len);
 
-        // ata_write(drive_ptr, ATA_REG_COMMAND, ATA_CMD_CACHE_FLUSH);
+        ata_write(drive_ptr, ATA_REG_COMMAND, ATA_CMD_CACHE_FLUSH);
+        while (ata_read(drive_ptr, ATA_REG_STATUS) & ATA_SR_BSY);
     }
 
     return;
 }
 
-void ata_drive_read_pio(struct ata_drive *drive_ptr, uint8_t sector_n, uint32_t lba, uint16_t *buff)
+void ata_drive_read_pio(struct ata_drive *drive_ptr, uint8_t sector_n, uint32_t lba, uint8_t *buff)
 {
     ata_drive_access_pio(drive_ptr, ATA_READ, sector_n, lba, buff);
 
     return;
 }
+
+void ata_drive_write_pio(struct ata_drive *drive_ptr, uint8_t sector_n, uint32_t lba, uint8_t *buff)
+{
+    ata_drive_access_pio(drive_ptr, ATA_WRITE, sector_n, lba, buff);
+
+    return;
+}
+
 
 void ata_drive_print_status(struct ata_drive *drive_ptr)
 {
