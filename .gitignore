@@ -6,4 +6,3 @@ bochs*
 *.bin
 qemu/vhdd.img
 progetto_driver.txt
-conf/sectors.dat

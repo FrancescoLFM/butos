@@ -17,7 +17,7 @@ void _start()
     keyboard_start();
     vga_open();
 
-    test_string();
+    test_ata();
 
     stop();
 }
