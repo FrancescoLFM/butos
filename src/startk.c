@@ -7,11 +7,10 @@
 #include <libs/alloc.h>
 
 void vga_open();
-void vga_scroll_down();
 void test_ata();
-
 void test_string();
 void test_allocator();
+void test_scan();
 
 void _start()
 {
@@ -30,6 +29,8 @@ void _start()
     isr_install();
     keyboard_start(100);
     vga_open();
+
+    test_scan();
 
     stop();
 }

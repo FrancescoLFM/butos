@@ -25,6 +25,6 @@ int queue_empty(queue_t *q);
 int queue_full(queue_t *q);
 int queue_enqueue(queue_t *q, char c);
 char queue_dequeue(queue_t *q);
-
+void queue_flush(queue_t *q);
 
 #endif

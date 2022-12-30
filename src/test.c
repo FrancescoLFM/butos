@@ -2,6 +2,23 @@
 #include <libs/print.h>
 #include <libs/string.h>
 #include <libs/allocator.h>
+#include <libs/scan.h>
+#include <libs/alloc.h>
+
+void test_scan()
+{
+    const size_t SIZE = 50;
+    char *buffer;
+
+    buffer = kalloc(SIZE * sizeof(*buffer));
+    if (!buffer)
+        puts("Failed to allocate buffer\n");
+
+    for (;;) {
+        gets(buffer, SIZE);
+        print_pm(RED, buffer);
+    }
+}
 
 void test_allocator()
 {

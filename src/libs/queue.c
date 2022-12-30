@@ -88,3 +88,10 @@ char queue_dequeue(queue_t *q)
     
     return result;
 }
+
+void queue_flush(queue_t *q)
+{
+    q->size = 0;
+    q->head = 0;
+    q->tail = 0;
+}
