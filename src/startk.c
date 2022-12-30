@@ -10,12 +10,15 @@ void vga_scroll_down();
 void test_ata();
 
 void test_string();
+void test_allocator();
 
 void _start()
 {
     isr_install();
     keyboard_start();
     vga_open();
+
+    test_allocator();
 
     stop();
 }

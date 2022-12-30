@@ -20,7 +20,7 @@ CFLAGS 	   += -I$(PROGDIR)/
 # File oggetto
 OBJ			= $(PROGDIR)/startk.o $(PROGDIR)/test.o
 OBJ		   += $(LIBCPUDIR)/idt.o $(LIBCPUDIR)/isr.o $(LIBCPUDIR)/pic.o
-OBJ		   += $(LIBDIR)/print.o $(LIBDIR)/string.o
+OBJ		   += $(LIBDIR)/print.o $(LIBDIR)/string.o $(LIBDIR)/allocator.o $(LIBDIR)/alloc.o
 OBJ		   += $(DRIVERSDIR)/pci.o $(DRIVERSDIR)/ata.o $(DRIVERSDIR)/keyboard.o $(DRIVERSDIR)/vga.o
 
 
