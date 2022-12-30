@@ -38,6 +38,11 @@
 #define LEFT_ARROW_KEY      0x4B
 #define DOWN_ARROW_KEY      0x50
 
-void keyboard_start();
+#include <libs/queue.h>
+
+/* used by input functions */
+extern queue_t *input_buffer;
+
+void keyboard_start(size_t input_buffer_size);
 
 #endif

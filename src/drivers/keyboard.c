@@ -2,10 +2,9 @@
 #include <libs/print.h>
 #include <libs/string.h>
 #include <drivers/keyboard.h>
-
 #include <include/asm.h>
-#include <include/def.h>
 #include <include/trigger.h>
+#include <libs/alloc.h>
 
 #define EXTENDED_SCANCODE         0xE0
 #define RELEASED(SCAN)            ((SCAN) | RELEASED_KEY)
@@ -73,6 +72,9 @@ uint8_t ALTGR_KEYS[] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
+
+static queue_t input_buffer_;
+queue_t *input_buffer = &input_buffer_;
 
 /**
  * Default keyboard
@@ -184,8 +186,10 @@ void keyboard_handler(struct registers_t *regs)
     } else {  /* normal keys */
 
         chr = keyboard_read_character(current_keyboard, scan);
-        if (chr)
+        if (chr) {
             putc(STD_COLOR, chr);
+            queue_enqueue(input_buffer, chr);
+        }
         
     }
 }
@@ -193,8 +197,9 @@ void keyboard_handler(struct registers_t *regs)
 /**
  * Sets the irq for the keyboard to work
  */
-void keyboard_start()
+void keyboard_start(size_t input_buffer_size)
 {
+    queue_init(input_buffer, input_buffer_size);
     set_int_handler(IRQ(1), keyboard_handler);
 }
 

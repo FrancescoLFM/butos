@@ -16,19 +16,20 @@ void test_allocator();
 void _start()
 {
     void *heap_start = (void *) 0x200000;
-    size_t heap_size = 10000;
+    size_t heap_size = 100000;
     void *registry_start = heap_start + heap_size;
     size_t registry_capacity = 100 * 8; /* numero massimo di allocazioni */
 
-    isr_install();
-    keyboard_start();
-    vga_open();
     kalloc_start(
         heap_start,
         heap_size,
         registry_start,
         registry_capacity
     );
+
+    isr_install();
+    keyboard_start(100);
+    vga_open();
 
     stop();
 }
