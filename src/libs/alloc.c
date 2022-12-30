@@ -20,6 +20,8 @@ void kalloc_start(
         registry,
         reg_size
     );
+
+    allocator_print(kallocator, 1);
 }
 
 void *kalloc(size_t size)

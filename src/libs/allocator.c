@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <libs/string.h>
 #include <libs/print.h> /* debug */
+#include <include/asm.h> /* stop() */
 
 #include <libs/allocator.h>
 
@@ -178,8 +179,8 @@ void *allocator_realloc(allocator_t *a, void *ptr, size_t size)
 
 static void raise_free_error()
 {
-    puts("free error\n");
-    asm volatile ("jmp .");
+    print_pm(RED, "[FATAL ERROR] INVALID FREE\n");
+    stop();
 }
 
 void allocator_free(allocator_t *a, void *ptr)
@@ -189,7 +190,6 @@ void allocator_free(allocator_t *a, void *ptr)
     index = allocator_find_in_registry(a, ptr);
     if (index < 0)
         raise_free_error();
-
     
     allocator_unregister(a, index);
 }
