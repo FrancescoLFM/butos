@@ -15,10 +15,9 @@ void test_scan()
     if (!buffer)
         puts("Failed to allocate buffer\n");
 
-    for (;;) {
-        gets(buffer, SIZE);
-        print_pm(RED, buffer);
-    }
+    gets(buffer, SIZE);
+    int i = strtol(buffer, NULL, 10);
+    printk(STD_COLOR, "%d\n", i);
 }
 
 void test_allocator()
