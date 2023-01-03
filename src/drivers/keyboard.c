@@ -1,5 +1,4 @@
 #include <cpu/idt.h>
-#include <libs/print.h>
 #include <libs/string.h>
 #include <drivers/keyboard.h>
 #include <include/asm.h>
@@ -187,7 +186,6 @@ void keyboard_handler(struct registers_t *regs)
 
         chr = keyboard_read_character(current_keyboard, scan);
         if (chr) {
-            putc(STD_COLOR, chr);
             queue_enqueue(input_buffer, chr);
         }
         

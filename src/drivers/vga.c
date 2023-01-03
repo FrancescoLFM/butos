@@ -37,6 +37,11 @@ int vga_pointer_inc(int pos)
     if (vga_pointer + pos < VGA_TEXT_START)
         pos = 0;
 
+    /* don't go back to previous line*/
+    mod = (vga_pointer - VGA_TEXT_START) % VGA_COLS; /* offset from current row start */
+    if (pos <= -mod)
+        pos = -mod;
+
     /* scrolling */
     if (vga_pointer + pos >= MAX_VID) {
         quot = (vga_pointer + pos - MIN_VID) / VGA_COLS - VGA_ROWS; /* extra needed rows */
@@ -98,12 +103,27 @@ int vga_tab()
     return vga_pointer_inc(tab_size - mod);
 }
 
+void vga_clear(uint8_t color)
+{
+    vga_pointer_set(VGA_TEXT_START);
+
+    while (vga_pointer < VGA_TEXT_END) {
+        vga_write(color, ' ');
+        vga_pointer++;
+    }
+
+    vga_pointer_set(VGA_TEXT_START);
+}
+
 void vga_scroll_down()
 {
     struct vga_char *lineptr;
 
-    for (lineptr = VGA_TEXT_START; lineptr <= VGA_TEXT_END - 80; lineptr += VGA_COLS)
-        memcpy(lineptr, lineptr + VGA_COLS, sizeof(*lineptr) * 80);
+    for (
+        lineptr = VGA_TEXT_START;
+        lineptr <= VGA_TEXT_END - 80;
+        lineptr += VGA_COLS
+    ) memcpy(lineptr, lineptr + VGA_COLS, sizeof(*lineptr) * 80);
 
 }
 

@@ -108,6 +108,7 @@ int vga_newline();
 int vga_allign_left();
 int vga_tab();
 void vga_scroll_down();
+void vga_clear(uint8_t color);
 
 /* REGISTERS */
 

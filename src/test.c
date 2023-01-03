@@ -1,4 +1,5 @@
 #include <drivers/ata.h>
+#include <drivers/vga.h>
 #include <libs/print.h>
 #include <libs/string.h>
 #include <libs/allocator.h>
@@ -107,13 +108,18 @@ void test_ata()
 
     printk(STD_COLOR, "Sector %d: \n", SECTOR_SELECTED);
 
-    for (uint32_t i=(ATA_SECTOR_SIZE * (SECTOR_SELECTED - 1)); i < ATA_SECTOR_SIZE * SECTOR_SELECTED; i++) {
+    for (
+        uint32_t i=(ATA_SECTOR_SIZE * (SECTOR_SELECTED - 1));
+        i < ATA_SECTOR_SIZE * SECTOR_SELECTED;
+        i++
+    ) {
         putc(STD_COLOR, sector_buff[i]);
         
         if (++words_readed == WORD_PER_ROW) {
             words_readed = 0;
             putc(STD_COLOR, '\n');
-        };
+
+        }
     }
 
     putc(STD_COLOR, '\n');

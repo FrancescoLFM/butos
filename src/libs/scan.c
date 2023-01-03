@@ -1,31 +1,48 @@
 #include <drivers/keyboard.h>
+#include <libs/print.h>
 
+/**
+ * NOTA: i tab non vengono registrati per problemi di
+ * sincronizzazione fra schermo e input
+ */
 int getchar()
 {
-    while (queue_empty(input_buffer));
-    return (unsigned char)(queue_dequeue(input_buffer));
+    unsigned char c;
+
+    do { /* ignora i tab */
+        while (queue_empty(input_buffer));
+        c = queue_dequeue(input_buffer);
+    } while (c == '\t');
+
+    putc(STD_COLOR, c);
+    return c;
 }
 
-#include <libs/print.h>
 char *gets(char *s, size_t size)
 {
     char c;
     char *string = s;
 
-    if (size <= 2)
+    if (size <= 1)
         return NULL;
-
-    while ((c = getchar()) != -1 && c != '\n' && size-->2) {
-        if (c == '\b') {
+    
+    while (size > 1) {
+        switch ((c = getchar())) {
+        
+        case '\b':
             if (s > string)
-                s--;
-        } else {
-            *s++ = c;
+                s--, size++;
+            break;
+        
+        default:
+            *s++ = c, size--;
+            break;
         }
+
+        if (c == '\n' || c == -1)
+            break;
     }
     
-    if (c != -1)
-        *s++ = c;
     *s = '\0';
 
     return string;
