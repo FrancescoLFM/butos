@@ -2,6 +2,7 @@
 #define DRIVERS_KB_H
 
 #include <include/def.h>
+#include <libs/queue.h>
 
 /**
  * Documented at: https://wiki.osdev.org/%228042%22_PS/2_Controller
@@ -37,8 +38,6 @@
 #define RIGHT_ARROW_KEY     0x4D
 #define LEFT_ARROW_KEY      0x4B
 #define DOWN_ARROW_KEY      0x50
-
-#include <libs/queue.h>
 
 /* used by input functions */
 extern queue_t *input_buffer;

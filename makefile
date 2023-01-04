@@ -4,7 +4,7 @@ INITDIR	= init
 ISODIR	= src
 
 INIT  	= $(INITDIR)/boot.bin
-ISO		= $(ISODIR)/butos/butos.bin
+ISO		= $(ISODIR)/butos.bin
 
 BINDIR	= bin
 BINFILE	= $(BINDIR)/boot.bin
@@ -16,37 +16,42 @@ FORMAT	= raw
 SIZE	= 30K
 VMARGS	= -device piix3-ide,id=ide -drive id=disk,file=$(IMG),format=raw,if=none -device ide-hd,drive=disk,bus=ide.0 -m 2G
 
+define color_text
+	@echo -e "\033[$1m$2\033[0m"
+endef
+
 .PHONY=all
-all: $(TARGET)
+all:	
+	$(call color_text,91,"[MAKE] Compilazione del kernel butos")
+	make -C $(ISODIR)
+	$(call color_text,91,"[MAKE] Compilazione del bootloader in real mode")
+	make -C $(INITDIR)
+	make $(TARGET)
 
 $(TARGET): $(BINFILE)
-	@printf "\n[UPDATE] Generazione del disco avviabile\n\n"
+	$(call color_text,91,"[MAKE] Generazione del disco avviabile")
 	-mkdir $(QEMUDIR)
 	qemu-img create -f $(FORMAT) $@ $(SIZE)
 	$(DD) if=$^ of=$@ conv=notrunc
 
 
 $(BINFILE): $(ISO) $(INIT)
-	@printf "\n[UPDATE] Generazione dell'eseguibile complessivo\n\n"
+	$(call color_text,91,"[MAKE] Generazione dell eseguibile complessivo")
 	-mkdir bin
 	$(DD) seek=0 bs=512 count=1 conv=notrunc if=$(INIT) of=$@
 	$(DD) seek=1 bs=512 conv=notrunc if=$(ISO) of=$@
 
-$(INIT):
-	@printf "[UPDATE] Compilazione del bootloader in real mode\n\n"
-	make -C $(INITDIR)
-
-$(ISO):
-	@printf "\n[UPDATE] Compilazione del kernel butos\n\n"
-	make -C $(ISODIR)
+.PHONY=silent
+silent:
+	@make -s 2>/dev/null
 
 .PHONY=clean
 clean:
-	@printf "\n[UPDATE] Pulizia dei file di compilazione nel kernel\n\n"
+	$(call color_text,91,"[MAKE] Pulizia dei file di compilazione nel kernel")
 	make -C $(ISODIR) clean
-	@printf "[UPDATE] Pulizia dei file di compilazione nel bootloader\n\n"
+	$(call color_text,91,"[MAKE] Pulizia dei file di compilazione nel bootloader")
 	make -C $(INITDIR) clean
-	@printf "\n[UPDATE] Rimozione del disco generato\n\n"
+	$(call color_text,91,"[MAKE] Rimozione del disco generato")
 	rm $(TARGET)
 	rm $(BINFILE)
 
@@ -57,7 +62,3 @@ run:
 .PHONY=disass
 disass:
 	make -C $(ISODIR) disass
-
-.PHONY=debug
-debug:
-	make -C $(ISODIR) debug

@@ -1,82 +1,64 @@
-SHELL		= /bin/bash
+CC = gcc
+AS = as
+LD = ld
+OBJCOPY = objcopy
+OBJDUMP = objdump
+QEMU = qemu-system-x86_64
 
-CC			= gcc
-CFLAGS		= -ffreestanding -m32 -O2 -std=gnu99 -Wall -Wextra -Werror -fno-pie -fno-stack-protector -g
-LD			= ld
-AS			= as
-ASFLAGS 	= -march=i386 --32
+CFLAGS  = -ffreestanding -nostdlib -fno-pie -fno-stack-protector
+CFLAGS += -Wall -Wextra -Werror
+CFLAGS += -m32 -std=gnu99
+CFLAGS += -O2 -g
+CFLAGS += -I.
 
-# Cartelle
-PROGDIR		= .
-BINDIR		= $(PROGDIR)/butos
-LIBDIR		= $(PROGDIR)/libs
-LIBCPUDIR	= $(PROGDIR)/cpu
-DRIVERSDIR  = $(PROGDIR)/drivers
-SCRIPTDIR 	= ../scripts
-CONFDIR		= ../conf
+ASFLAGS = -march=i386 --32
 
-CFLAGS 	   += -I$(PROGDIR)/
+LDSCRIPT = butos.ld
 
-# File oggetto
-OBJ			= $(PROGDIR)/startk.o $(PROGDIR)/test.o
-OBJ		   += $(LIBCPUDIR)/idt.o $(LIBCPUDIR)/isr.o $(LIBCPUDIR)/pic.o
-OBJ		   += $(LIBDIR)/print.o $(LIBDIR)/string.o $(LIBDIR)/allocator.o $(LIBDIR)/alloc.o $(LIBDIR)/queue.o $(LIBDIR)/scan.o $(LIBDIR)/ctype.o
-OBJ		   += $(DRIVERSDIR)/pci.o $(DRIVERSDIR)/ata.o $(DRIVERSDIR)/keyboard.o $(DRIVERSDIR)/vga.o
+SOURCES_C = $(wildcard *.c **/*.c)
+SOURCES_ASM = $(wildcard *.s **/*.s)
 
+OBJECTS_C = $(SOURCES_C:.c=.o)
+OBJECTS_ASM = $(SOURCES_ASM:.s=.o)
 
-NAME		= butos
-TARGET		= $(BINDIR)/$(NAME).bin
-LDSCRIPT	= $(PROGDIR)/$(NAME).ld
-CONFIGURE	= $(SCRIPTDIR)/configure.sh
+OBJECTS = $(OBJECTS_C) $(OBJECTS_ASM)
+EXECUTABLE = butos
+BINARY = butos.bin
 
-DBG			= gdb
-DBGGEN		= $(SCRIPTDIR)/debug_gen.sh
-DGBSYM		= $(PROGDIR)/$(NAME).out.debug
-DGBSCR		= $(SCRIPTDIR)/butos.gdb
+DEBUG_FILE = debug.dbg
+
+define color_text
+	@echo -e "\033[$1m$2\033[0m"
+endef
 
 .PHONY=all
-all: $(TARGET)
+all: $(SOURCES_C) $(SOURCES_ASM) $(BINARY)
 
-%.o: %.c
+.c.o:
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(LIBDIR)/%.o: $(LIBDIR)/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
+.s.o:
+	$(AS) $(ASFLAGS) -c $< -o $@
 
-$(LIBCPUDIR)/%.o: $(LIBCPUDIR)/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
 
-$(LIBCPUDIR)/%.o: $(LIBCPUDIR)/%.s
-	$(AS) $(ASFLAGS) $< -o $@
+$(EXECUTABLE): $(OBJECTS)
+	$(LD) $^ -o $@ -T $(LDSCRIPT) --ignore-unresolved-symbol _GLOBAL_OFFSET_TABLE
 
-$(NAME).out: $(OBJ)
-	$(LD) $^ -o $@ -T $(LDSCRIPT) --ignore-unresolved-symbol _GLOBAL_OFFSET_TABLE_ 
 
-$(TARGET): $(NAME).out
-	@printf "\n[BUTOS] Compilazione terminata\n\n"
-	-mkdir $(BINDIR)
-	objcopy	-O binary -S $^ $@
-	$(DBGGEN) $^
-	$(CONFIGURE) $@ $(CONFDIR)
-	@printf "\n[BUTOS] Generazione del sorgente terminata\n\n"
-	rm $^
+$(BINARY): $(EXECUTABLE)
+	$(call color_text,32,"[BUTOS] Compilazione terminata")
+	$(OBJCOPY) --only-keep-debug $< $(DEBUG_FILE)
+	$(OBJCOPY) -O binary -S $< $@
+	$(call color_text,32,"[BUTOS] Generazione del binario terminata")
 
-.PHONY=debug
-debug:
-	qemu-system-x86_64 -s -S $(PROGDIR)/../bin/boot.bin &
-	$(DBG) -q -s $(DGBSYM) -x $(DGBSCR)
-	killall qemu-system-x86
-
-.PHONY=disass
-disass:
-	make $(NAME).out
-	objdump -mi386 -d $(NAME).out
-	rm $(NAME).out
 
 .PHONY=clean
 clean:
-	rm $(OBJ) $(TARGET) $(DGBSYM)
+	-rm -f $(OBJECTS)
+	-rm -f $(EXECUTABLE)
+	-rm -f $(BINARY)
+	-rm -f $(DEBUG_FILE)
 
-.PHONY=run
-run:
-	make -C $(PROGDIR)/.. run
+.PHONY=disass
+disass:
+	$(OBJDUMP) -mi386 -d $(EXECUTABLE)

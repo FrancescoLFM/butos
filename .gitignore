@@ -4,5 +4,7 @@ bochs*
 ~*
 *.debug
 *.bin
-qemu/vhdd.img
-progetto_driver.txt
+*.img
+*.out
+*.dbg
+butos
