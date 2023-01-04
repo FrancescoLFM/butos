@@ -12,9 +12,13 @@ BINFILE	= $(BINDIR)/boot.bin
 QEMUDIR = qemu
 IMG		= $(QEMUDIR)/vhdd.img
 TARGET	= $(IMG)
-FORMAT	= raw
 SIZE	= 30K
-VMARGS	= -device piix3-ide,id=ide -drive id=disk,file=$(IMG),format=raw,if=none -device ide-hd,drive=disk,bus=ide.0 -m 2G
+FORMAT  = raw
+VMARGS	= -device piix3-ide,id=ide -drive id=disk,file=$(IMG),format=$(FORMAT),if=none -device ide-hd,drive=disk,bus=ide.0 -m 2G
+
+DBG     = gdb
+DBGSYM  = src/butos
+DBGSCR  = scripts/butos.gdb
 
 define color_text
 	@echo -e "\033[$1m$2\033[0m"
@@ -62,3 +66,10 @@ run:
 .PHONY=disass
 disass:
 	make -C $(ISODIR) disass
+
+.PHONY=debug
+debug:
+	@echo "- - - Si consiglia di non utilizzare nessuna ottimizzazione per far funzionare gdb al meglio - - -"
+	qemu-system-x86_64 -s -S $(VMARGS) &
+	$(DBG) -q -s $(DBGSYM) -x $(DBGSCR)
+	killall qemu-system-x86_64
