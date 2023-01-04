@@ -12,8 +12,10 @@ void test_scan()
     char *buffer;
 
     buffer = kalloc(SIZE * sizeof(*buffer));
-    if (!buffer)
+    if (!buffer) {
         puts("Failed to allocate buffer\n");
+        return;
+    }
 
     gets(buffer, SIZE);
     int i = strtol(buffer, NULL, 10);

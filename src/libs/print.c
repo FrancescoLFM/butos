@@ -62,7 +62,7 @@ static int base_convert_r(char *buffer, size_t size, uint32_t num, uint32_t base
 {
     int depth;
 
-    if (num <= 0)
+    if (num == 0)
         return 0;
 
     depth = base_convert_r(buffer, size, num / base, base);
@@ -156,8 +156,10 @@ int printk(uint8_t color, char *str, ...)
 
         num = va_arg(list, uint32_t);
         error = base_convert(buffer, 80, is_signed ? (uint32_t)ABS((int32_t)num) : num, base) <= 0;
-        if (error)
+        if (error) {
+            va_end(list);
             return read;
+        }
         
         if (is_signed && (int32_t)num < 0)
             putc(color, '-');

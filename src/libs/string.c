@@ -1,4 +1,5 @@
 #include <libs/string.h>
+#include <stdint.h>
 
 #define CAST(PTR)    ((uint8_t *)(PTR))
 
@@ -6,47 +7,55 @@
 
 void *memcpy(void *restrict dest, const void *restrict src, size_t n)
 {
-    void *dest_ = dest;
+    uint8_t *dest_ = dest;
+    const uint8_t *src_ = src;
 
     while (n-->0)
-        *CAST(dest++) = *CAST(src++);
+        *dest_++ = *src_++;
 
-    return dest_;
+    return dest;
 }
 
 int memcmp(const void *s1, const void *s2, size_t n)
 {
-    while (n-->0 && *CAST(s1) == *CAST(s2)) {
-        CAST(s1++);
-        CAST(s2++);
+    const uint8_t *s1_ = s1;
+    const uint8_t *s2_ = s2;
+
+    while (n-->0 && *s1_ == *s2_) {
+        s1_++;
+        s2_++;
     }
-    return *(char *)s1 - *(char *)s2;
+    return *s1_ - *s2_;
 }
 
 void *memchr(const void *s, int c, size_t n)
 {    
     size_t i = 0;
+    const uint8_t *s_ = s;
 
     n--;
-    while (i < n && CAST(s)[i] != c)
+    while (i < n && s_[i] != c)
         i++;
 
-    return CAST(s)[i] == c ? CAST(s)+i : NULL;
+    return s_[i] == c ? (uint8_t *)(s_ + i) : NULL;
 }
 
 void *memrchr(const void *s, int c, size_t n)
 {
-    while (n-->0 && ((uint8_t *)s)[n] != c);
+    const uint8_t *s_ = s;
 
-    return CAST(s)[n] == c ? (CAST(s) + n) : NULL;
+    while (n-->0 && s_[n] != c);
+
+    return s_[n] == c ? (uint8_t *)(s_ + n) : NULL;
 }
 
 void *rawmemchr(const void *s, int c)
 {
-    while (*CAST(s) != c)
-        CAST(s++);
+    const uint8_t *s_ = s;
+    while (*s_ != c)
+        s_++;
 
-    return CAST(s);
+    return (uint8_t *)s_;
 }
 
 void *memset(void *s, int c, size_t n)

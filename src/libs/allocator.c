@@ -127,7 +127,7 @@ void *allocator_alloc(allocator_t *a, size_t size)
 }
 
 static
-int allocator_find_in_registry(allocator_t *a, void *ptr)
+int allocator_find_in_registry(allocator_t *a, const void *ptr)
 {
     for (size_t i = 0; i < a->size; i++)
         if (a->registry[i].start == ptr)

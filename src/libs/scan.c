@@ -22,13 +22,13 @@ int getchar()
 
 char *gets(char *s, size_t size)
 {
-    char c;
     char *string = s;
 
     if (size <= 1)
         return NULL;
     
     while (size > 1) {
+		char c;
         switch ((c = getchar())) {
         
         case '\b':

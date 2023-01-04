@@ -32,7 +32,7 @@ void vga_pointer_set(struct vga_char *address)
 
 int vga_pointer_inc(int pos)
 {
-    int quot, mod;
+    int mod;
 
     if (vga_pointer + pos < VGA_TEXT_START)
         pos = 0;
@@ -44,6 +44,8 @@ int vga_pointer_inc(int pos)
 
     /* scrolling */
     if (vga_pointer + pos >= MAX_VID) {
+        int quot;
+
         quot = (vga_pointer + pos - MIN_VID) / VGA_COLS - VGA_ROWS; /* extra needed rows */
         mod = (vga_pointer + pos - VGA_TEXT_START) % VGA_COLS;      /* offset from last row start */
         

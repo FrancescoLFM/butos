@@ -135,9 +135,9 @@ const char *pci_get_class(uint8_t classcode)
 {
     if (classcode == 0xFF)
         return "Unassigned Class (Vendor specific)";
-    if(classcode == 0x40)
+    else if(classcode == 0x40)
         return "Co-Processor";
-    if(classcode >= 0x41 && classcode <= 0xFE)
+    else if(classcode >= ARR_SIZE(PCI_CLASSCODES))
         return "Reserved";
 
     return PCI_CLASSCODES[classcode];
