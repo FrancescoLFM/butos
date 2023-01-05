@@ -1,4 +1,4 @@
-CC = clang
+CC = gcc
 OBJCOPY = objcopy
 OBJDUMP = objdump
 QEMU = qemu-system-x86_64
@@ -9,7 +9,7 @@ FLAGS += -O2 -g
 FLAGS += -I.
 
 CFLAGS = $(FLAGS)
-CFLAGS += -ffreestanding -nostdlib -fno-stack-protector -std=gnu99
+CFLAGS += -ffreestanding -nostdlib -fno-stack-protector -std=c99
 
 LDSCRIPT = butos.ld
 
