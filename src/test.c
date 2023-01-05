@@ -10,6 +10,7 @@ void test_scan()
 {
     const size_t SIZE = 50;
     char *buffer;
+    char *delim = " .,;:?!-";
 
     buffer = kalloc(SIZE * sizeof(*buffer));
     if (!buffer) {
@@ -17,9 +18,19 @@ void test_scan()
         return;
     }
 
-    gets(buffer, SIZE);
-    int i = strtol(buffer, NULL, 10);
-    printk(STD_COLOR, "%d\n", i);
+    for (char *tok;;) {
+        gets(buffer, SIZE);
+        tok = strtok(buffer, delim);
+        if (!tok)
+            continue;
+
+        puts_c(GREEN, tok);
+        puts("\n");
+        while ((tok = strtok(NULL, delim))) {
+            puts_c(GREEN, tok);
+            puts("\n");
+        }
+    }
 }
 
 void test_allocator()
@@ -51,8 +62,8 @@ void test_allocator()
     ptrs[3][3] = 4;
 
     for (int i = 0; i < 4; i++)
-        printk(STD_COLOR, "%u ", (uint32_t)ptrs[3][i]);
-    putc(STD_COLOR, '\n');
+        printk("%u ", (uint32_t)ptrs[3][i]);
+    putc('\n');
 
     ptrs[3] = allocator_realloc(allocator, ptrs[3], 8);
 
@@ -60,8 +71,8 @@ void test_allocator()
      * l'avvenuta copiatura
      */
     for (int i = 0; i < 4; i++)
-        printk(STD_COLOR, "%u ", (uint32_t)ptrs[3][i]);
-    putc(STD_COLOR, '\n');
+        printk("%u ", (uint32_t)ptrs[3][i]);
+    putc('\n');
 
     allocator_print(allocator, 1);
     puts("- - - - \n");
@@ -76,12 +87,12 @@ void test_string()
     int buffer[70] = {0};
 
     for (int i = 0; i < 70; i++)
-        printk(STD_COLOR, "%x ", buffer[i]);
+        printk("%x ", buffer[i]);
     
     memset(buffer, 19, sizeof(buffer));
 
     for (int i = 0; i < 70; i++)
-        printk(BLUE | GREEN, "%x ", buffer[i]);
+        printk("%x ", buffer[i]);
 }
 
 
@@ -107,22 +118,22 @@ void test_ata()
 
     ata_drive_read_pio(ata_drive_ptr, SECTOR_SELECTED, 1, sector_buff);
 
-    printk(STD_COLOR, "Sector %d: \n", SECTOR_SELECTED);
+    printk("Sector %d: \n", SECTOR_SELECTED);
 
     for (
         uint32_t i=(ATA_SECTOR_SIZE * (SECTOR_SELECTED - 1));
         i < ATA_SECTOR_SIZE * SECTOR_SELECTED;
         i++
     ) {
-        putc(STD_COLOR, sector_buff[i]);
+        putc(sector_buff[i]);
         
         if (++words_readed == WORD_PER_ROW) {
             words_readed = 0;
-            putc(STD_COLOR, '\n');
+            putc('\n');
 
         }
     }
 
-    putc(STD_COLOR, '\n');
+    putc('\n');
 
 }

@@ -179,7 +179,7 @@ void *allocator_realloc(allocator_t *a, void *ptr, size_t size)
 
 static void raise_free_error()
 {
-    print_pm(RED, "[FATAL ERROR] INVALID FREE\n");
+    puts_c(RED, "[FATAL ERROR] INVALID FREE\n");
     stop();
 }
 
@@ -196,7 +196,7 @@ void allocator_free(allocator_t *a, void *ptr)
 
 void allocator_print(allocator_t *a, int verbose)
 {
-    if (verbose) printk(STD_COLOR, "heap start: 0x%x\n"
+    if (verbose) printk("heap start: 0x%x\n"
             "heap end: 0x%x\n"
             "heap size: %u\n"
             "\n"
@@ -207,6 +207,5 @@ void allocator_print(allocator_t *a, int verbose)
             a->size, a->capacity);
     
     for (size_t i = 0; i < a->size; i++)
-        printk(STD_COLOR, "    - (0x%x, %u)\n",
-                a->registry[i].start, a->registry[i].size);
+        printk("    - (0x%x, %u)\n",a->registry[i].start, a->registry[i].size);
 }

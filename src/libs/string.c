@@ -1,5 +1,6 @@
 #include <libs/string.h>
 #include <stdint.h>
+#include <libs/alloc.h>
 
 #define CAST(PTR)    ((uint8_t *)(PTR))
 
@@ -176,3 +177,56 @@ char *strncat(char *restrict dest, const char *restrict src, size_t n)
 
     return dest;
 }
+
+void tokenize(
+        char *restrict tokenized,
+        char *restrict str,
+        const char *restrict delim
+)
+{
+    int dont_repeat = 0;
+
+    for (; *str; str++) {
+        if (strchr(delim, *str) == NULL) {
+            *tokenized++ = *str;
+            dont_repeat = 0;
+        } else if (dont_repeat == 0) {
+            *tokenized++ = '\0';
+            dont_repeat = 1;
+        }
+    }
+
+    *tokenized++ = '\0';
+    *tokenized  = '\0';
+
+}
+
+/**
+ * NOTA: La tokenizzazione avviene tutta alla prima chiamata,
+ * diversamente dalla funzione standard. Nelle chiamate
+ * successive delim può anche essere messo a NULL perché tanto
+ * non ha effetto. In seguito magari cercherò di farla
+ * comportare nel modo standard, ma per ora va bene così
+ */
+char *strtok(char *restrict str, const char *restrict delim)
+{
+    static char *tokenized = NULL;
+    static char *p = NULL;
+
+    if (str) {
+        if (tokenized != NULL)
+            kfree(tokenized);
+        p = tokenized = kalloc(strlen(str) + 2);
+        if (tokenized == NULL)
+            return NULL;
+        else
+            tokenize(tokenized, str, delim);
+    } else if (p) {
+        while (*p++);
+        if (*p == '\0')
+            p = NULL;
+    }
+
+    return p;
+}
+

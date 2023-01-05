@@ -19,5 +19,6 @@ char *strcat(char *restrict dest, const char *restrict src);
 char *strncat(char *restrict dest, const char *restrict src, size_t n);
 char *strcpy(char *restrict dest, const char *restrict src);
 char *strncpy(char *restrict dest, const char *restrict src, size_t n);
+char *strtok(char *restrict str, const char *restrict delim);
 
 #endif

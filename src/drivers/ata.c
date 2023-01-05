@@ -135,7 +135,7 @@ void ata_drive_access_pio(struct ata_drive *drive_ptr, uint8_t direction, uint8_
     if (direction == ATA_READ) {
         #ifdef DEBUG
 
-        printk(STD_COLOR, "Reading %d sectors at 0x%x\n", sector_n, lba);
+        printk("Reading %d sectors at 0x%x\n", sector_n, lba);
         ata_drive_print_status(drive_ptr);
 
         #endif
@@ -152,7 +152,7 @@ void ata_drive_access_pio(struct ata_drive *drive_ptr, uint8_t direction, uint8_
     else if (direction == ATA_WRITE) {
         #ifdef DEBUG
 
-        printk(STD_COLOR, "Writing %d sectors at 0x%x\n", sector_n, lba);
+        printk("Writing %d sectors at 0x%x\n", sector_n, lba);
         ata_drive_print_status(drive_ptr);
 
         #endif
@@ -192,64 +192,64 @@ void ata_drive_print_status(struct ata_drive *drive_ptr)
 {
     uint8_t status = ata_read(drive_ptr, ATA_REG_STATUS);
 
-    printk(GREEN, "DRIVE %d STATUS:\n", drive_ptr->drive_n);
+    printk_c(GREEN, "DRIVE %d STATUS:\n", drive_ptr->drive_n);
 
     if (status & ATA_SR_ERR) {
-        printk(GREEN, "ERROR\n");
+        printk_c(GREEN, "ERROR\n");
         ata_drive_print_error(drive_ptr);
     }
 
     if (status & ATA_SR_IDX)
-        printk(GREEN, "INDEX\n");
+        printk_c(GREEN, "INDEX\n");
 
     if (status & ATA_SR_CORR)
-        printk(GREEN, "CORRECTED DATA\n");
+        printk_c(GREEN, "CORRECTED DATA\n");
 
     if (status & ATA_SR_DRQ)
-        printk(GREEN, "DATA REQUEST READY\n");
+        printk_c(GREEN, "DATA REQUEST READY\n");
 
     if (status & ATA_SR_DSC)
-        printk(GREEN, "DRIVE SEEK COMPLETE\n");
+        printk_c(GREEN, "DRIVE SEEK COMPLETE\n");
 
     if (status & ATA_SR_DF)
-        printk(GREEN, "DRIVE WRITE FAULT\n");
+        printk_c(GREEN, "DRIVE WRITE FAULT\n");
 
     if (status & ATA_SR_DRDY)
-        printk(GREEN, "DRIVE READY\n");
+        printk_c(GREEN, "DRIVE READY\n");
 
     if (status & ATA_SR_BSY)
-        printk(GREEN, "DRIVE BUSY\n");
+        printk_c(GREEN, "DRIVE BUSY\n");
 }
 
 void ata_drive_print_error(struct ata_drive *drive_ptr)
 {
     uint8_t error = ata_read(drive_ptr, ATA_REG_ERROR);
 
-    printk(RED, "DRIVE %d ERRORS:\n", drive_ptr->drive_n);
+    printk_c(RED, "DRIVE %d ERRORS:\n", drive_ptr->drive_n);
 
     if (error & ATA_ER_AMNF)
-        printk(RED, "No address mark\n");
+        printk_c(RED, "No address mark\n");
 
     if (error & ATA_ER_TK0NF)
-        printk(RED, "Track 0 not found\n");
+        printk_c(RED, "Track 0 not found\n");
 
     if (error & ATA_ER_ABRT)
-        printk(RED, "Command aborted\n");
+        printk_c(RED, "Command aborted\n");
 
     if (error & ATA_ER_MCR)
-        printk(RED, "Media change request\n");
+        printk_c(RED, "Media change request\n");
 
     if (error & ATA_ER_IDNF)
-        printk(RED, "ID mark not found\n");
+        printk_c(RED, "ID mark not found\n");
 
     if (error & ATA_ER_MC)
-        printk(RED, "Media changed\n");
+        printk_c(RED, "Media changed\n");
 
     if (error & ATA_ER_UNC)
-        printk(RED, "Uncorrectable data\n");
+        printk_c(RED, "Uncorrectable data\n");
 
     if (error & ATA_ER_BBK)
-        printk(RED, "Bad block\n");
+        printk_c(RED, "Bad block\n");
 }
 
 void ata_drive_delay(struct ata_drive *drive_ptr)

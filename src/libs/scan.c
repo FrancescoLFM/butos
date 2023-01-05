@@ -16,7 +16,7 @@ int getchar()
         c = queue_dequeue(input_buffer);
     } while (c == '\t');
 
-    putc(STD_COLOR, c);
+    putc(c);
     return c;
 }
 

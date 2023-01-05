@@ -8,7 +8,7 @@
 
 static char* digits = "0123456789abcdef";
 
-void putc(uint8_t color, char c)
+int putc_c(uint8_t color, int c)
 {
     switch (c) {
     case '\n':
@@ -33,31 +33,46 @@ void putc(uint8_t color, char c)
         break;
     
     default:
-        vga_write(color, c);
+        vga_write(color, (unsigned char) c);
         vga_pointer_inc(1);
         break;
     }
 
-    return;
+    return (unsigned char) c;
 }
 
-int print_pm(uint8_t color, char* string)
+int puts_c(uint8_t color, const char* string)
 {
     int count = 0;
 
     while (*string) {
-        putc(color, *string++);
+        putc_c(color, *string++);
         count++;
     }
 
     return count;
 }
 
-int puts(char* str)
+int putc(int c)
 {
-    return print_pm(STD_COLOR, str);
+    return (unsigned char) putc_c(STD_COLOR, c);
 }
 
+int puts(const char* str)
+{
+    return puts_c(STD_COLOR, str);
+}
+
+/**
+ * Convert number @num to base @base into a
+ * string which lives in @buffer at most
+ * large @size bytes
+ *
+ * stop when digits are exhausted or if recursion
+ * depth exceeds the buffer size
+ *
+ * each recursion handles the digit depth
+ */
 static int base_convert_r(char *buffer, size_t size, uint32_t num, uint32_t base)
 {
     int depth;
@@ -78,18 +93,22 @@ int base_convert(char *buffer, size_t size, uint32_t num, uint32_t base)
 {
     int length;
 
+    /* base range check */
     if (!IN_BOUNDS_EQ(MIN_BASE, base, MAX_BASE))
         return -1;
     
+    /* minimum buffer size check */
     if (size < 2)
         return -1;
     
+    /* handling zero */
     if (num == 0) {
         buffer[0] = digits[0];
         buffer[1] = '\0';
         return 1;
     }
 
+    /* recursive conversion */
     length = base_convert_r(buffer, size-1, num, base);
     if (length < 0)
         return -1;
@@ -99,9 +118,9 @@ int base_convert(char *buffer, size_t size, uint32_t num, uint32_t base)
     return length;
 }
 
-int printk(uint8_t color, char *str, ...)
+static
+int vprintk_c(uint8_t color, char *str, va_list list)
 {
-    va_list list;
     char buffer[80];
 
     char opt;
@@ -111,21 +130,19 @@ int printk(uint8_t color, char *str, ...)
 
     int read = 0;
 
-    va_start(list, str);
-
     while (*str) {
         if (*str != '%') {
-            putc(color, *str++);
+            putc_c(color, *str++);
             continue;
         }
         
-        // Lettura dei comandi 
+        /* lettura dei comandi */
         str++;
         opt = *str++;
 
         if (opt == 's') {
             char *p = va_arg(list, char *);
-            print_pm(color, p);
+            puts_c(color, p);
             continue;
         }
 
@@ -154,20 +171,42 @@ int printk(uint8_t color, char *str, ...)
                 return read;
         }
 
+        /* esecuzione dei comandi */
         num = va_arg(list, uint32_t);
         error = base_convert(buffer, 80, is_signed ? (uint32_t)ABS((int32_t)num) : num, base) <= 0;
-        if (error) {
-            va_end(list);
+        if (error)
             return read;
-        }
         
         if (is_signed && (int32_t)num < 0)
-            putc(color, '-');
-        print_pm(color, buffer);
+            putc_c(color, '-');
+        puts_c(color, buffer);
         
         read++;
     }
 
-    va_end(list);
     return read;
+}
+
+int printk_c(uint8_t color, char *str, ...)
+{
+    va_list list;
+    int ret;
+
+    va_start(list, str);
+    ret = vprintk_c(color, str, list);
+    va_end(list);
+
+    return ret;
+}
+
+int printk(char *str, ...)
+{
+    va_list list;
+    int ret;
+
+    va_start(list, str);
+    ret = vprintk_c(STD_COLOR, str, list);
+    va_end(list);
+
+    return ret;
 }

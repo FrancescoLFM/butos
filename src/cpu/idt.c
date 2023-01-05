@@ -67,12 +67,12 @@ char *isr_msg[] = {
 
 void isr_handler(struct registers_t *regs)
 {
-    print_pm(STD_COLOR, "CPU exception: ");
+    puts("CPU exception: ");
 
-    if(regs->isr_no < 20)
-        print_pm(STD_COLOR, isr_msg[regs->isr_no]);
+    if(regs->isr_no < ARR_SIZE(isr_msg))
+        puts(isr_msg[regs->isr_no]);
     else
-        print_pm(STD_COLOR, "Reserved");
+        puts("Reserved");
 }
 
 struct idt_descriptor{
