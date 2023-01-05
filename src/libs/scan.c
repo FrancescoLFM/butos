@@ -1,7 +1,7 @@
+#include <limits.h>
+#include <libs/ctype.h>
 #include <drivers/keyboard.h>
 #include <libs/print.h>
-#include <libs/ctype.h>
-#include <limits.h>
 
 /**
  * NOTA: i tab non vengono registrati per problemi di

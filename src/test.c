@@ -29,7 +29,7 @@ void test_allocator()
 
     void *heap_start = (void *)0x200000;
     size_t heap_size = 1000;
-    void *registry_start = heap_start + heap_size;
+    void *registry_start = (char *)heap_start + heap_size;
     size_t registry_size = 100 * sizeof(struct memspace);
 
     allocator_init(

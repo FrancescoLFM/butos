@@ -1,14 +1,17 @@
 OUTPUT_FORMAT("elf32-i386", "elf32-i386", "elf32-i386")
+ENTRY(_start)
+
 OUTPUT_ARCH(i386)
 
 MEMORY
 {
-    LANFREDI (rx) : ORIGIN = 0xf000, LENGTH = 30K
+    RAM (rwx) : ORIGIN = 0xf000, LENGTH = 30K
 }
 
 SECTIONS
 {
-    .text : { *(.text) } > LANFREDI
-    .data : { *(.data) } > LANFREDI
-    .bss : { *(.bss) } > LANFREDI
+    . = 0xf000;
+    .text : { *(.text) } > RAM
+    .data : { *(.data) } > RAM
+    .bss : { *(.bss) } > RAM
 }

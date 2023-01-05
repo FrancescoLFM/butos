@@ -85,9 +85,11 @@ void load_idt()
     struct idt_descriptor volatile idt_desc;
     idt_desc.base = (uint32_t) idt;
     idt_desc.limit = IDT_ENTRIES * (sizeof(struct idt_entry)) - 1;
-    asm volatile ("lidt (%0)" 
-                 :
-                 : "r" (&idt_desc));
+    __asm__ __volatile__ (
+        "lidt (%0)" 
+        :
+        : "r" (&idt_desc)
+    );
 }
 
 isr_t int_handler[UINT8_MAX] = {0};

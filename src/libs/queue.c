@@ -82,7 +82,7 @@ char queue_dequeue(queue_t *q)
     if (queue_empty(q))
         return QUEUE_EMPTY;
         
-    result = q->values[q->head];
+    result = (unsigned char) q->values[q->head];
     q->head = (q->head + 1) % q->capacity;
     q->size--;
     

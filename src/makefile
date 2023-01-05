@@ -1,17 +1,15 @@
-CC = gcc
-AS = as
-LD = ld
+CC = clang
 OBJCOPY = objcopy
 OBJDUMP = objdump
 QEMU = qemu-system-x86_64
 
-CFLAGS  = -ffreestanding -nostdlib -fno-pie -fno-stack-protector
-CFLAGS += -Wall -Wextra -Werror
-CFLAGS += -m32 -std=gnu99
-CFLAGS += -O2 -g
-CFLAGS += -I.
+FLAGS = -Wall -Wextra -Werror
+FLAGS += -fno-pie -m32
+FLAGS += -O2 -g
+FLAGS += -I.
 
-ASFLAGS = -march=i386 --32
+CFLAGS = $(FLAGS)
+CFLAGS += -ffreestanding -nostdlib -fno-stack-protector -std=gnu99
 
 LDSCRIPT = butos.ld
 
@@ -38,11 +36,11 @@ all: $(SOURCES_C) $(SOURCES_ASM) $(BINARY)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 .s.o:
-	$(AS) $(ASFLAGS) -c $< -o $@
+	$(CC) $(FLAGS) -c $< -o $@
 
 
 $(EXECUTABLE): $(OBJECTS)
-	$(LD) $^ -o $@ -T $(LDSCRIPT) --ignore-unresolved-symbol _GLOBAL_OFFSET_TABLE
+	$(CC) $(CFLAGS) $^ -o $@ -T $(LDSCRIPT)
 
 
 $(BINARY): $(EXECUTABLE)
