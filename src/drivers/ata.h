@@ -1,4 +1,13 @@
+#ifndef ATA_H
+#define ATA_H
+
 #include <include/def.h>
+
+#define HIGH                    1
+#define LOW                     0
+
+#define ATA                     0
+#define ATAPI                   1
 
 // ERRORS
 
@@ -63,10 +72,14 @@
 #define ATA_SECONDARY_BASE      0x170
 #define ATA_SECONDARY_CTRL      0x376
 
-#define ATA_IDENT_WORDS         256
-#define ATA_IDENT_MODEL         27
+#define ATA_IDENT_BYTES         512
+#define ATA_IDENT_CONF          0
+#define ATA_IDENT_TYPE_BIT      8
+#define ATA_IDENT_SERIAL        20
+#define ATA_IDENT_SERIAL_LEN    20
+#define ATA_IDENT_MODEL         54
 #define ATA_IDENT_MODEL_LEN     40
-#define ATA_IDENT_CAPABILTIES   49
+#define ATA_IDENT_MAX_LBA(buff) (uint32_t) ((buff[122] << 24) | (buff[123] << 16) | (buff[120] << 8) | buff[121])
 
 // Directions:
 #define ATA_READ                0x00
@@ -82,7 +95,7 @@
 #define SETUP_HDDSEL_PIO(    \
                     HAS_LBA, \
                     LBA,     \
-                    DRIVE)      (LBA_END(LBA) + (HAS_LBA << 6) + (DRIVE->drive_n << 4))
+                    DRIVE_N)    (LBA_END((LBA)) | ((HAS_LBA) << 6) | ((DRIVE_N) << 4))
 
 // #define DEBUG
 
@@ -96,17 +109,26 @@ struct ata_channel
 struct ata_drive
 {
     struct ata_channel *channel;
-    uint16_t ident_buffer[ATA_IDENT_WORDS];
+    struct ata_drive_info *ident;
     uint8_t drive_n; // 0: Master drive, 1: Slave drive
     uint8_t nIEN;
 };
 
+struct ata_drive_info
+{
+    uint8_t type; // 0 ATA, 1 ATAPI
+    uint32_t max_lba;
+    char serial[ATA_IDENT_SERIAL_LEN];
+    char model[ATA_IDENT_MODEL_LEN];
+};
 
 void ata_channels_init(struct ata_channel *channel_ptr, uint8_t channel_n);
 
 void ata_drive_init(struct ata_drive *drive_ptr, uint8_t channel_n, uint8_t drive_n);
 
-uint16_t ata_read(struct ata_drive *drive_ptr, uint8_t reg);
+uint8_t ata_read(struct ata_drive *drive_ptr, uint8_t reg);
+
+uint16_t ata_read_word(struct ata_drive *drive_ptr, uint8_t reg);
 
 uint8_t ata_read_ctrl(struct ata_drive *drive_ptr, uint8_t reg);
 
@@ -120,10 +142,19 @@ void ata_select_drive(struct ata_drive *drive_ptr);
 
 void ata_switch_int(struct ata_drive *drive_ptr);
 
-void ata_read_ident_buffer(struct ata_drive *drive_ptr);
+void ata_drive_read_buffer(struct ata_drive *drive_ptr, uint8_t *buffer, uint32_t buff_len);
+
+void ata_drive_identify(struct ata_drive *drive_ptr);
 
 void ata_drive_get_model(struct ata_drive *drive_ptr, uint8_t buff[ATA_IDENT_MODEL_LEN]);
 
+/*
+  ? This function access the drive based on direction (ATA_READ, ATA_WRITE)
+  ? It fails if lba exceeds the maximum capacity or the drive is removable
+  ? sector_n has to be the len of the buffer in sectors
+
+  * See the ATA documentation for more informations https://wiki.osdev.org/ATA_PIO_Mode
+*/
 void ata_drive_access_pio(struct ata_drive *drive_ptr, uint8_t direction, uint8_t sector_n, uint32_t lba, uint8_t *buff);
 
 void ata_drive_read_pio(struct ata_drive *drive_ptr, uint8_t sector_n, uint32_t lba, uint8_t *buff);
@@ -137,3 +168,5 @@ void ata_drive_print_error(struct ata_drive *drive_ptr);
 void ata_drive_delay(struct ata_drive *drive_ptr);
 
 void ata_drive_wait(struct ata_drive *drive_ptr);
+
+#endif

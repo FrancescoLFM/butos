@@ -1,9 +1,8 @@
 #include <drivers/ata.h>
 #include <include/asm.h>
 #include <libs/print.h>
+#include <libs/string.h>
 #include <cpu/idt.h>
-
-struct ata_channel operating_channel;
 
 void ata_channels_init(struct ata_channel *channel_ptr, uint8_t channel_n)
 {
@@ -21,20 +20,31 @@ void ata_channels_init(struct ata_channel *channel_ptr, uint8_t channel_n)
 
 void ata_drive_init(struct ata_drive *drive_ptr, uint8_t channel_n, uint8_t drive_n)
 {
-    struct ata_channel *channel_ptr = &operating_channel;
+    static struct ata_channel operating_channel;
+    static struct ata_drive_info ata_drive_info_dummy;
 
-    ata_channels_init(channel_ptr, channel_n);
+    ata_channels_init(&operating_channel, channel_n);
 
-    drive_ptr->channel = channel_ptr;
+    drive_ptr->channel = &operating_channel;
     drive_ptr->drive_n = drive_n & 1;
     drive_ptr->nIEN = 0;
+    drive_ptr->ident = &ata_drive_info_dummy;
 
     ata_select_drive(drive_ptr);
     ata_switch_int(drive_ptr); // Clear interrupt
-    ata_read_ident_buffer(drive_ptr);
+    ata_drive_identify(drive_ptr);
 }
 
-uint16_t ata_read(struct ata_drive *drive_ptr, uint8_t reg)
+uint8_t ata_read(struct ata_drive *drive_ptr, uint8_t reg)
+{
+    uint16_t result = 0;
+
+    result = inb(drive_ptr->channel->base + reg);
+
+    return result;
+}
+
+uint16_t ata_read_word(struct ata_drive *drive_ptr, uint8_t reg)
 {
     uint16_t result = 0;
 
@@ -47,7 +57,7 @@ uint8_t ata_read_ctrl(struct ata_drive *drive_ptr, uint8_t reg)
 {
     uint8_t result = 0;
 
-    result = inw(drive_ptr->channel->ctrl + reg);
+    result = inb(drive_ptr->channel->ctrl + reg);
 
     return result;
 }
@@ -88,43 +98,60 @@ void ata_switch_int(struct ata_drive *drive_ptr)
     return;
 }
 
-void ata_read_ident_buffer(struct ata_drive *drive_ptr)
+void ata_drive_read_buffer(struct ata_drive *drive_ptr, uint8_t *buffer, uint32_t buff_len)
 {
+    uint32_t i = 0;
+    uint16_t data;
+
+    do {
+        ata_drive_wait(drive_ptr);
+            
+        data = ata_read_word(drive_ptr, ATA_REG_DATA);
+        buffer[i++] = (uint8_t) (data >> 8);
+        buffer[i++] = (uint8_t) (data & 0xFF);
+    } while (i < buff_len);
+    #ifdef DEBUG
+
+    ata_drive_print_status(drive_ptr);
+
+    #endif
+
+    return;
+}
+
+void ata_drive_identify(struct ata_drive *drive_ptr)
+{
+    uint8_t buffer[ATA_IDENT_BYTES];
+
     ata_write(drive_ptr, ATA_REG_COMMAND, ATA_CMD_IDENTIFY);
+    ata_drive_read_buffer(drive_ptr, buffer, ATA_IDENT_BYTES);
 
-    for (uint16_t i = 0; i < ATA_IDENT_WORDS; i++)
-        drive_ptr->ident_buffer[i] = ata_read(drive_ptr, ATA_REG_DATA);
-}
+    drive_ptr->ident->type = (buffer[ATA_IDENT_CONF] >> ATA_IDENT_TYPE_BIT);
+    drive_ptr->ident->max_lba = ATA_IDENT_MAX_LBA(buffer);
+    
+    memcpy(drive_ptr->ident->serial, &(buffer[ATA_IDENT_SERIAL]), ATA_IDENT_SERIAL_LEN);
+    drive_ptr->ident->serial[ATA_IDENT_SERIAL_LEN-1] = '\0';
 
+    memcpy(drive_ptr->ident->model, &(buffer[ATA_IDENT_MODEL]), ATA_IDENT_MODEL_LEN);
+    drive_ptr->ident->model[ATA_IDENT_MODEL_LEN-1] = '\0';
 
-void ata_drive_get_model(struct ata_drive *drive_ptr, uint8_t buff[ATA_IDENT_MODEL_LEN])
-{
-    uint16_t j = 0, i = 0;
-
-    for (; i < ATA_IDENT_MODEL_LEN; i += 2, j += 1) {
-        buff[i] = drive_ptr->ident_buffer[ATA_IDENT_MODEL + j] >> 8;
-        buff[i+1] = drive_ptr->ident_buffer[ATA_IDENT_MODEL + j] & 0xFF;
-    }
-
-    buff[39] = '\0';
-}
-
-uint8_t ata_drive_has_lba(struct ata_drive *drive_ptr)
-{
-    uint8_t lba_bit = (uint8_t)((drive_ptr->ident_buffer[ATA_IDENT_CAPABILTIES] >> 8) & 0x1);
-
-    return lba_bit;
+    return;
 }
 
 void ata_drive_access_pio(struct ata_drive *drive_ptr, uint8_t direction, uint8_t sector_n, uint32_t lba, uint8_t *buff)
 {
-    uint8_t has_lba;
     uint32_t i = 0;
     uint16_t rw_val;
     uint32_t buff_len = sector_n * ATA_SECTOR_SIZE;
 
-    has_lba = 1;
-    ata_write(drive_ptr, ATA_REG_HDDEVSEL, SETUP_HDDSEL_PIO(has_lba, lba, drive_ptr));
+    if (drive_ptr->ident->type == ATAPI)
+        return;
+    if (lba >= drive_ptr->ident->max_lba)
+        return;
+    else if (drive_ptr->ident->max_lba >= HIGH)
+        ata_write(drive_ptr, ATA_REG_HDDEVSEL, SETUP_HDDSEL_PIO(HIGH, lba, drive_ptr->drive_n));
+    else
+        ata_write(drive_ptr, ATA_REG_HDDEVSEL, SETUP_HDDSEL_PIO(LOW, lba, drive_ptr->drive_n));
 
     ata_write(drive_ptr, ATA_REG_LBA0, LBA_LOW(lba));
     ata_write(drive_ptr, ATA_REG_LBA1, LBA_MID(lba));
@@ -136,24 +163,16 @@ void ata_drive_access_pio(struct ata_drive *drive_ptr, uint8_t direction, uint8_
         #ifdef DEBUG
 
         printk("Reading %d sectors at 0x%x\n", sector_n, lba);
-        ata_drive_print_status(drive_ptr);
 
         #endif
         ata_write(drive_ptr, ATA_REG_COMMAND, ATA_CMD_READ_PIO);
 
-        do {
-            ata_drive_wait(drive_ptr);
-            
-            rw_val = ata_read(drive_ptr, ATA_REG_DATA);
-            buff[i++] = (uint8_t) (rw_val >> 8);
-            buff[i++] = (uint8_t) (rw_val & 0xFF);
-        } while (i < buff_len);
+        ata_drive_read_buffer(drive_ptr, buff, buff_len);
     }
     else if (direction == ATA_WRITE) {
         #ifdef DEBUG
 
         printk("Writing %d sectors at 0x%x\n", sector_n, lba);
-        ata_drive_print_status(drive_ptr);
 
         #endif
         ata_write(drive_ptr, ATA_REG_COMMAND, ATA_CMD_WRITE_PIO);
@@ -264,6 +283,9 @@ void ata_drive_wait(struct ata_drive *drive_ptr)
     while (ata_read(drive_ptr, ATA_REG_STATUS) & ATA_SR_BSY);
     
     while (!(ata_read(drive_ptr, ATA_REG_STATUS) & ATA_SR_DRQ));
+
+    if (ata_read(drive_ptr, ATA_REG_STATUS) & ATA_SR_ERR)
+        ata_drive_print_error(drive_ptr);
 
     return;
 }

@@ -9,7 +9,7 @@ FLAGS += -O2 -g
 FLAGS += -I.
 
 CFLAGS = $(FLAGS)
-CFLAGS += -ffreestanding -nostdlib -fno-stack-protector -std=c99
+CFLAGS += -ffreestanding -nostdlib -fno-stack-protector -std=c99 -mgeneral-regs-only
 
 LDSCRIPT = butos.ld
 
