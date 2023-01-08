@@ -19,6 +19,7 @@ void vga_open()
 {
     vga_ioas = inb(VGA_MISCELLANEOUS_OUTPUT_REGISTER_READ) & IOAS_BIT;
     vga_cursor_enable(13, 14);
+    vga_cursor_update_(0);
 }
 
 void vga_pointer_set(struct vga_char *address)
@@ -105,12 +106,12 @@ int vga_tab()
     return vga_pointer_inc(tab_size - mod);
 }
 
-void vga_clear(uint8_t color)
+void vga_clear(uint8_t bg_color)
 {
-    vga_pointer_set(VGA_TEXT_START);
+    vga_pointer = VGA_TEXT_START;
 
     while (vga_pointer < VGA_TEXT_END) {
-        vga_write(color, ' ');
+        vga_write(BACKGROUND(bg_color) | FOREGROUND(WHITE), ' ');
         vga_pointer++;
     }
 
@@ -177,9 +178,9 @@ void vga_cursor_update_(uint16_t pos)
 	vga_register_write((uint8_t)HIGH_OFFSET(pos));
 }
 
-void vga_cursor_update(const struct cursor crs)
+void vga_cursor_update(uint8_t x, uint8_t y)
 {
-	uint16_t pos = crs.y * VGA_WIDTH + crs.x;
+	uint16_t pos = y * VGA_WIDTH + x;
 	vga_cursor_update_(pos);
 }
 
@@ -195,14 +196,12 @@ uint16_t vga_cursor_get_position_()
     return pos;
 }
 
-struct cursor* vga_cursor_get_position(struct cursor* crs)
+void vga_cursor_get_position(uint8_t *x, uint8_t *y)
 {
     uint16_t pos = vga_cursor_get_position_();
 
-    crs->x = pos % VGA_WIDTH;
-    crs->y = (pos - crs->x) / VGA_WIDTH;
-
-    return crs;
+    *x = pos % VGA_WIDTH;
+    *y = (pos - *x) / VGA_WIDTH;
 }
 
 void vga_cursor_inc(int pos)

@@ -5,13 +5,11 @@ MEMORY
 
 SECTIONS
 {
-    .text :
-    {
+    .text : {
         *(.text);
     } > BOOTLOADER
 
-    .data :
-    {
+    .data : {
         *(.data);
     } > BOOTLOADER
 }

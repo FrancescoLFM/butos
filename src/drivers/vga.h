@@ -96,11 +96,6 @@
 #define VGA_WIDTH       VGA_COLS
 #define VGA_ROWS        25
 
-struct cursor {
-    uint8_t x;
-    uint8_t y;
-};
-
 void vga_open();
 int vga_pointer_inc(int pos);
 void vga_write(uint8_t color, char c);
@@ -108,7 +103,7 @@ int vga_newline();
 int vga_allign_left();
 int vga_tab();
 void vga_scroll_down();
-void vga_clear(uint8_t color);
+void vga_clear(uint8_t bg_color);
 
 /* REGISTERS */
 
@@ -122,8 +117,8 @@ void vga_cursor_disable();
 void vga_cursor_enable(uint8_t cursor_start, uint8_t cursor_end);
 uint16_t vga_cursor_get_position_();
 void vga_cursor_update_(uint16_t pos);
-void vga_cursor_update(const struct cursor crs);
-struct cursor* vga_cursor_get_position(struct cursor* crs);
+void vga_cursor_update(uint8_t x, uint8_t y);
+void vga_cursor_get_position(uint8_t *x, uint8_t *y);
 void vga_cursor_inc(int pos);
 
 #endif

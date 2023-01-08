@@ -6,7 +6,6 @@
 #include <drivers/keyboard.h>
 #include <libs/alloc.h>
 
-void vga_open();
 void test_ata();
 void test_string();
 void test_allocator();
@@ -29,6 +28,8 @@ void _start()
     isr_install();
     keyboard_start(100);
     vga_open();
+
+    vga_clear(BLACK);
 
     test_scan();
 

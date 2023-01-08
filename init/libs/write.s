@@ -3,21 +3,6 @@
 
     .text
 
-    .global write
-# bx = char* string
-# cx = uint16_t size
-write:
-start_f
-    pusha
-    mov     $0x0E, %ah
-1:
-    mov     (%bx), %al
-    int    $0x10
-    inc     %bx
-    loop    1b
-    popa
-end_f
-
     .global puts
 # bx = char* string
 puts:
@@ -38,28 +23,26 @@ puts_exit:
 end_f
 
     .global htos
-# dx = Number to convert
+.LC0:
+        .string "0123456789abcdef"
 htos:
-start_f
-    pusha
-    mov     $0x04, %cx
-    mov     $hex_string, %di
-1:
-    mov     %dl, %al
-    and     $0x0f, %al
-    mov     %al, %ah
-    
-    add     $0x30, %al
-    cmp     $0x0a, %ah
-    jl      2f
-    add     $0x07, %al
-2:
-    mov     %cx, %bx
-    mov     %al, 1(%bx, %di) # tipo bx + cx + 0x01
-    shr     $0x04, %dx
-    loop    1b
-    popa
-end_f
+        mov     %sp, %si
+        movw    2(%si), %dx
+        mov     $3, %ax
+.L2:
+        # body del for loop
+        # buffer[2+i] <- num & 0xf
+        # i va da 3 a 0
+        mov     %dx, %si
+        shr     $4, %dx
+        and     $15, %si
+        mov     .LC0(%si), %cx
+        movb    %cl, hex_string+2(%eax)
+
+        sub     $1, %ax
+        jnb     .L2
+        mov     $hex_string, %ax
+        ret
 
     .global printh
 # dx = Number to convert
@@ -67,7 +50,9 @@ printh:
 start_f
     push    %bx
 
+	push	%dx
     call    htos
+    pop     %dx
 
     mov     $hex_string, %bx
     call    puts
@@ -75,5 +60,6 @@ start_f
     pop     %bx
 end_f
 
+    .data
 hex_string:
-    .asciz  "0x0000" #7c7d
+    .asciz  "0x0000"

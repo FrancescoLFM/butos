@@ -1,7 +1,3 @@
-# Code by Giovanni Zaccaria
-# Copyright 2021
-# This product is under MIT License
-
     .code16
     .include "include/macro.s"
 
@@ -47,5 +43,6 @@ end:
     popa
 end_f
 
+    .data
 panic_msg:
-    .asciz "Disk error, system halted. Error code: "
+    .asciz "Disk error code: "
