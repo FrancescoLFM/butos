@@ -4,3 +4,7 @@ bochs*
 ~*
 *.debug
 *.bin
+*.img
+*.out
+*.dbg
+butos

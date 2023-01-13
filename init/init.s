@@ -16,6 +16,7 @@ init:
 
     ljmp    $0, $_start
 _start:
+    # Reading the kernel from the disk
     movb    %dl, (drive_number)
 
     mov     $0x0002, %cx
@@ -23,8 +24,6 @@ _start:
     xor     %dh, %dh
     mov     $0xf000, %bx
     call    read_sector
-
-    call    clear
 
     cli
     lgdt    gdt_descriptor
@@ -38,6 +37,7 @@ _start:
     
     .code32
 init_protected:
+    # Initializing register for the protected mode
     mov     $0x10, %ax
     mov     %ax, %ds
     mov     %ax, %es

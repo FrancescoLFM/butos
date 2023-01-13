@@ -1,17 +1,15 @@
 MEMORY
 {
-    BOOTLOADER (rx) : ORIGIN = 0x7c00, LENGTH = 0x400
+    BOOTLOADER (rx) : ORIGIN = 0x7c00, LENGTH = 0x200
 }
 
 SECTIONS
 {
-    .text :
-    {
+    .text : {
         *(.text);
     } > BOOTLOADER
 
-    .data :
-    {
+    .data : {
         *(.data);
     } > BOOTLOADER
 }
