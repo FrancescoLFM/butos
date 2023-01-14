@@ -33,7 +33,9 @@ butos/
 Note that the headers are placed in the *same folder* as the source files.
 
 ## Documentation
-The `doc/` folder should present the same structure shown before and should contain a `filename.doc` file for each `file.s`, `file.c` and `file.h` in order to make more usable this codebase. At the moment no documentation file has been implemented.
+At the moment che `doc/` folder contains documents in italian to help new
+programmers start developing for `butos`. Feel free to check them. In the future
+I would like to add documentation for every possible library or driver.
 
 ## Scripts
 Writing a bare metal program can be very repetitive. The `script` folder contains useful scripts for automating some jobs. Some are no longer needed, others are still useful at compile time.
