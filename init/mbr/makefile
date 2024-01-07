@@ -1,9 +1,6 @@
-NAME		= bootloader
+NAME		= bootstrap
 
 AS			= as
-
-SECTORS 	= $(shell printf "0x%X" $(shell echo $(shell stat --format=%s ../src/butos.bin) / 512 + 1 | bc))
-ASFLAGS		= -I./ --defsym SEC=$(SECTORS)
 
 LD			= ld
 LDSCR		= $(NAME).ld
@@ -23,10 +20,10 @@ endef
 all: $(BINARY)
 
 %.o: %.s
-	$(AS) $(ASFLAGS) $< -o $@
+	$(AS) $< -o $@
 
 $(EXECUTABLE): $(OBJECTS)
-	$(call color_text,33,"[INIT] Linking del bootloader")
+	$(call color_text,33,"[INIT] Linking del bootstrap")
 	$(LD) -T $(LDSCR) $^ -o $@
 
 $(BINARY): $(EXECUTABLE)
@@ -34,8 +31,6 @@ $(BINARY): $(EXECUTABLE)
 	strip --remove-section=.note.gnu.property $^
 	objcopy -O binary -S $^ $@
 	printf "\x55\xaa" | dd of=$@ bs=1 seek=510 count=2 conv=notrunc
-	make -C mbr/
-	cat mbr/bootstrap.bin bootloader.bin > boot.bin
 
 .PHONY: run
 run:
@@ -46,9 +41,4 @@ clean:
 	-rm -f $(OBJECTS)
 	-rm -f $(EXECUTABLE)
 	-rm -f $(BINARY)
-	make -C mbr/ clean
 
-.PHONY: debug
-debug:
-	@echo "run `target remote localhost:123` inside a gbd instance"
-	qemu-system-x86_64 -drive format=raw,file=$(BINARY) -s -S

@@ -14,7 +14,7 @@ IMG		= $(QEMUDIR)/vhdd.img
 TARGET	= $(IMG)
 SIZE	= 35K
 FORMAT  = raw
-VMARGS	= -device piix3-ide,id=ide -drive id=disk,file=$(IMG),format=$(FORMAT),if=none -device ide-hd,drive=disk,bus=ide.0 -m 2G
+VMARGS	= -device piix3-ide,id=ide -drive id=disk,file=$(IMG),format=$(FORMAT),if=none -device ide-hd,drive=disk,bus=ide.0 -m 2G -vnc :0
 
 DBG     = gdb
 DBGSYM  = src/butos
@@ -42,8 +42,8 @@ $(TARGET): $(BINFILE)
 $(BINFILE): $(ISO) $(INIT)
 	$(call color_text,91,"[MAKE] Generazione dell eseguibile complessivo")
 	-mkdir bin
-	$(DD) seek=0 bs=512 count=1 conv=notrunc if=$(INIT) of=$@
-	$(DD) seek=1 bs=512 conv=notrunc if=$(ISO) of=$@
+	$(DD) seek=0 bs=512 count=2 conv=notrunc if=$(INIT) of=$@
+	$(DD) seek=2 bs=512 conv=notrunc if=$(ISO) of=$@
 
 .PHONY=silent
 silent:

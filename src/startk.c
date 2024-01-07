@@ -16,7 +16,7 @@ void _start()
     void *heap_start = (void *) 0x200000;
     size_t heap_size = 100000;
     void *registry_start = (unsigned char *)heap_start + heap_size;
-    size_t registry_capacity = 100 * 8; /* numero massimo di allocazioni */
+    size_t registry_capacity = 100 * 8;
 
     kalloc_start(
         heap_start,

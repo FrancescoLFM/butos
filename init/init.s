@@ -19,7 +19,7 @@ _start:
     # Reading the kernel from the disk
     movb    %dl, (drive_number)
 
-    mov     $0x0002, %cx
+    mov     $0x0003, %cx
     mov     (num_sectors), %al
     xor     %dh, %dh
     mov     $0xf000, %bx
