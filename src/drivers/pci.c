@@ -1,6 +1,7 @@
 #include <drivers/pci.h>
 #include <include/asm.h>
 #include <libs/print.h>
+#include <libs/alloc.h>
 
 static const
 char *PCI_CLASSCODES[] = {
@@ -158,6 +159,7 @@ struct pci_device_info *pci_read_device_info(uint8_t bus, uint8_t device, struct
     uint32_t reg_zero = REG0(bus, device);
     uint32_t reg_two = REG2(bus, device);
     uint32_t reg_three = REG3(bus, device);
+    uint32_t reg_fif = REG15(bus, device);
 
     pci_dev->bus = bus;
     pci_dev->device_number = device;
@@ -168,6 +170,8 @@ struct pci_device_info *pci_read_device_info(uint8_t bus, uint8_t device, struct
     pci_dev->subclass = REG_BYTE(reg_two, SUBCLASS_OFFSET);
     pci_dev->class_code = REG_BYTE(reg_two, CLASSCODE_OFFSET);
     pci_dev->header_type = REG_BYTE(reg_three, HEADERTYPE_OFFSET);
+    pci_dev->int_line = reg_fif = REG_BYTE(reg_fif, INTLINE_OFFSET);
+    pci_dev->int_PIN = reg_fif = REG_BYTE(reg_fif, INTPIN_OFFSET);
 
     return pci_dev;
 }
@@ -180,4 +184,65 @@ uint8_t pci_read_device_status(uint8_t bus, uint8_t device)
     status = REG_BYTE(reg_one, STATUS_OFFSET);
 
     return status;
+}
+
+uint32_t pci_get_device_num()
+{
+    struct pci_device_info dev_info;
+    struct pci_device_info *dev_info_ptr = &dev_info;
+    uint32_t num = 0;
+
+    for (uint16_t bus = 0; bus < 256; bus++)
+        for (uint8_t dev = 0; dev < 32; dev++) {
+            pci_read_device_info(bus, dev, dev_info_ptr);
+            if (dev_info_ptr->device_id != 0xFFFF) {
+                num++;
+            }
+        }
+
+    return num;
+}
+
+void devs_list_destroy(struct devs_list *devs)
+{
+    for (size_t i=0; i < devs->len; i++) {
+        kfree(devs->buffer[i]);
+    }
+    kfree(devs->buffer);
+}
+
+struct devs_list *devs_list_init()
+{
+    struct devs_list *ret;
+
+    ret = kalloc(sizeof(*ret));
+    ret->len = pci_get_device_num();
+    ret->buffer = kalloc(ret->len * sizeof(struct pci_device_info *));
+    if (ret->buffer == NULL)
+        return NULL;
+    
+    for (size_t i=0; i < ret->len; i++) {
+        ret->buffer[i] = kalloc(sizeof(struct pci_device_info));
+        if (ret->buffer[i] == NULL) {
+            ret->len = i;
+            devs_list_destroy(ret);
+            return NULL;
+        }
+    }
+
+    return ret;
+}
+
+void pci_scan_devices(struct devs_list *devs)
+{
+    size_t i = 0;
+
+    for (uint16_t bus = 0; bus < 256; bus++)
+        for (uint8_t dev = 0; dev < 32; dev++) {
+            pci_read_device_info(bus, dev, devs->buffer[i]);
+            if (devs->buffer[i]->device_id != 0xFFFF)
+                i++;
+        }
+        
+    return;
 }

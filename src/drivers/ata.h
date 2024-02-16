@@ -2,6 +2,7 @@
 #define ATA_H
 
 #include <include/def.h>
+#include <drivers/pci.h>
 
 #define HIGH                    1
 #define LOW                     0
@@ -97,6 +98,10 @@
                     LBA,     \
                     DRIVE_N)    (LBA_END((LBA)) | ((HAS_LBA) << 6) | ((DRIVE_N) << 4))
 
+
+#define ATA_FOUND               0
+#define ATA_NOT_FOUND           1
+
 // #define DEBUG
 
 struct ata_channel
@@ -122,9 +127,9 @@ struct ata_drive_info
     char model[ATA_IDENT_MODEL_LEN];
 };
 
-void ata_channels_init(struct ata_channel *channel_ptr, uint8_t channel_n);
+void ata_channels_init(struct ata_channel *channel_ptr, uint8_t channel_n, struct pci_device_info *pci_dev);
 
-void ata_drive_init(struct ata_drive *drive_ptr, uint8_t channel_n, uint8_t drive_n);
+struct ata_drive *ata_drive_init(uint8_t channel_n, uint8_t drive_n, struct pci_device_info *pci_dev);
 
 uint8_t ata_read(struct ata_drive *drive_ptr, uint8_t reg);
 
@@ -140,13 +145,11 @@ void ata_write_ctrl(struct ata_drive *drive_ptr, uint8_t reg, uint8_t data);
 
 void ata_select_drive(struct ata_drive *drive_ptr);
 
-void ata_switch_int(struct ata_drive *drive_ptr);
+void ata_disable_int(struct ata_drive *drive_ptr);
 
-void ata_drive_read_buffer(struct ata_drive *drive_ptr, uint8_t *buffer, uint32_t buff_len);
+uint8_t ata_drive_read_buffer(struct ata_drive *drive_ptr, uint8_t *buffer, uint32_t buff_len);
 
-void ata_drive_identify(struct ata_drive *drive_ptr);
-
-void ata_drive_get_model(struct ata_drive *drive_ptr, uint8_t buff[ATA_IDENT_MODEL_LEN]);
+uint8_t ata_drive_identify(struct ata_drive *drive_ptr);
 
 /*
   ? This function access the drive based on direction (ATA_READ, ATA_WRITE)
@@ -167,6 +170,8 @@ void ata_drive_print_error(struct ata_drive *drive_ptr);
 
 void ata_drive_delay(struct ata_drive *drive_ptr);
 
-void ata_drive_wait(struct ata_drive *drive_ptr);
+uint8_t ata_drive_wait(struct ata_drive *drive_ptr);
+
+void ata_drive_fini(struct ata_drive *drive_ptr);
 
 #endif

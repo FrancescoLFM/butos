@@ -5,7 +5,7 @@ OUTPUT_ARCH(i386)
 
 MEMORY
 {
-    RAM (rwx) : ORIGIN = 0xf000, LENGTH = 30K
+    RAM (rwx) : ORIGIN = 0xf000, LENGTH = 100K
 }
 
 SECTIONS

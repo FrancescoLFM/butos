@@ -1,5 +1,6 @@
 #include <drivers/ata.h>
 #include <drivers/vga.h>
+#include <drivers/pci.h>
 #include <libs/print.h>
 #include <libs/string.h>
 #include <libs/allocator.h>
@@ -96,36 +97,73 @@ void test_string()
 }
 
 
-#define BUTOS_SECTORS   0x1d
-#define SECTOR_SELECTED 0x1f
-#define WORD_PER_ROW    23
-
 void test_ata()
 {
-    uint8_t words_readed = 0;
-    struct ata_drive ata_drive_dummy;
-    struct ata_drive *ata_drive_ptr = &ata_drive_dummy;
+    struct ata_drive *ata_drive_ptr;
+    struct devs_list *devs;
 
-    uint8_t *sector_buff = (uint8_t *)(0x2000000);
-    for (int i=0; i < BUTOS_SECTORS * ATA_SECTOR_SIZE; i++)
+    devs = devs_list_init();
+    if (devs == NULL)
+        return;
+    pci_scan_devices(devs);
+
+    ata_drive_ptr = NULL;
+    for (size_t n=0; n < devs->len; n++)
+        if (devs->buffer[n]->class_code == IDE_CLASSCODE)
+            ata_drive_ptr = ata_drive_init(0, 0, devs->buffer[n]);
+    
+    if (ata_drive_ptr == NULL) {
+        devs_list_destroy(devs);
+        return;
+    }
+
+    devs_list_destroy(devs);
+    ata_drive_fini(ata_drive_ptr);
+}
+
+#define SECTOR_SELECTED 0
+#define WORD_PER_ROW    26
+
+void test_ata_io()
+{
+    uint8_t words_readed = 0;
+    struct ata_drive *ata_drive_ptr;
+    struct devs_list *devs;
+
+    devs = devs_list_init();
+    if (devs == NULL)
+        return;
+    pci_scan_devices(devs);
+
+
+    uint8_t *sector_buff = kalloc(ATA_SECTOR_SIZE);
+    if (sector_buff == NULL) {
+        devs_list_destroy(devs);
+        return;
+    }
+    for (int i=0; i < ATA_SECTOR_SIZE; i++)
         sector_buff[i] = 0;
 
-    ata_drive_init(ata_drive_ptr, 0, 0);
+    ata_drive_ptr = NULL;
+    for (size_t n=0; n < devs->len; n++)
+        if (devs->buffer[n]->class_code == IDE_CLASSCODE)
+            ata_drive_ptr = ata_drive_init(0, 0, devs->buffer[n]);
+    
+    if (ata_drive_ptr == NULL) {
+        devs_list_destroy(devs);
+        return;
+    }
 
-    strcpy((char *)sector_buff, "Buon natale da butos");
+    // strcpy((char *)sector_buff, "Buon natale da butos");
 
-    ata_drive_write_pio(ata_drive_ptr, 1, SECTOR_SELECTED, sector_buff);
+    // ata_drive_write_pio(ata_drive_ptr, 1, SECTOR_SELECTED, sector_buff);
 
-    ata_drive_read_pio(ata_drive_ptr, SECTOR_SELECTED, 1, sector_buff);
+    ata_drive_read_pio(ata_drive_ptr, 1, SECTOR_SELECTED, sector_buff);
 
     printk("Sector %d: \n", SECTOR_SELECTED);
 
-    for (
-        uint32_t i=(ATA_SECTOR_SIZE * (SECTOR_SELECTED - 1));
-        i < ATA_SECTOR_SIZE * SECTOR_SELECTED;
-        i++
-    ) {
-        putc(sector_buff[i]);
+    for (uint32_t i=0; i < ATA_SECTOR_SIZE; i++) {
+        printk("%x ", sector_buff[i]);
         
         if (++words_readed == WORD_PER_ROW) {
             words_readed = 0;
@@ -135,5 +173,51 @@ void test_ata()
     }
 
     putc('\n');
-
+    ata_drive_fini(ata_drive_ptr);
+    devs_list_destroy(devs);
+    kfree(sector_buff);
 }
+
+void test_pci()
+{
+    struct devs_list *devs;
+
+    devs = devs_list_init();
+    if (devs == NULL)
+        return;
+    pci_scan_devices(devs);
+
+    for (size_t i = 0; i < devs->len; i++) {
+            if (devs->buffer[i]->device_id != 0xFFFF) {
+                printk("ID: %d %s: %s\n", devs->buffer[i]->device_id,
+                       pci_get_class(devs->buffer[i]->class_code), 
+                       pci_get_subclass(devs->buffer[i]->class_code, devs->buffer[i]->subclass));
+            }
+        }
+}
+
+void test_ide_controller()
+{
+    struct pci_device_info dev_info;
+    struct pci_device_info *dev_info_ptr = &dev_info;
+
+    for (uint16_t bus = 0; bus < 256; bus++)
+        for (uint8_t dev = 0; dev < 32; dev++) {
+            pci_read_device_info(bus, dev, dev_info_ptr);
+            if (dev_info_ptr->class_code == IDE_CLASSCODE) 
+            {
+                printk("BAR0: 0x%x\n", BAR0(bus, dev));
+                printk("BAR1: 0x%x\n", BAR1(bus, dev));
+                printk("BAR2: 0x%x\n", BAR2(bus, dev));
+                printk("BAR3: 0x%x\n", BAR3(bus, dev));
+                printk("BAR4: 0x%x\n", BAR4(bus, dev));
+                printk("PROGIF: 0x%x\n", dev_info_ptr->prog_if);
+                printk("VENDOR ID: 0x%x\n", dev_info_ptr->vendor_id);
+                printk("DEVICE ID: 0x%x\n", dev_info_ptr->device_id);
+                printk("HEADER TYPE: 0x%x\n", dev_info_ptr->header_type);
+                printk("INTERRUPT LINE: %d\n", dev_info_ptr->int_line);
+                printk("INTERRUPT PIN: 0x%x\n", dev_info_ptr->int_PIN);
+            }
+        }
+}
+

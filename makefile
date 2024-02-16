@@ -12,7 +12,7 @@ BINFILE	= $(BINDIR)/boot.bin
 QEMUDIR = qemu
 IMG		= $(QEMUDIR)/vhdd.img
 TARGET	= $(IMG)
-SIZE	= 35K
+SIZE	= 101K
 FORMAT  = raw
 VMARGS	= -device piix3-ide,id=ide -drive id=disk,file=$(IMG),format=$(FORMAT),if=none -device ide-hd,drive=disk,bus=ide.0 -m 2G -vnc :0
 

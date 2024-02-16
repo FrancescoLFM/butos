@@ -11,7 +11,6 @@ self_relocation:
     mov     %ax, %gs
     mov     %ax, %fs
 copy_loop:
-    nop
     movw    $0x0100, %cx
     movw    $0x7c00, %si
     movw    $0x0600, %di
@@ -39,8 +38,8 @@ PT1:
     .word 0    # Cylinder, head 0
     .byte 2    # Second sector
     .byte 1    # Random partition type
-    .word 0
-    .byte 3
-    .long 0
+    .word 1    # Cylinder 0, head 1
+    .byte 247  # 100kb
     .long 1
+    .long 202
 
