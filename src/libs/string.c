@@ -230,3 +230,52 @@ char *strtok(char *restrict str, const char *restrict delim)
     return p;
 }
 
+size_t strcspn(const char *s1, register const char *s2)
+{
+	register const char *p, *spanp;
+	register char c, sc;
+
+	/*
+	 * Stop as soon as we find any character from s2.  Note that there
+	 * must be a NUL in s2; it suffices to stop when we find that, too.
+	 */
+	for (p = s1;;) {
+		c = *p++;
+		spanp = s2;
+		do {
+			if ((sc = *spanp++) == c)
+				return (p - 1 - s1);
+		} while (sc != 0);
+	}
+	/* NOTREACHED */
+}
+
+char *strsep(char **stringp, const char *delim) 
+{
+    char *begin, *end;
+    begin = *stringp;
+    if (begin == NULL)
+        return NULL;
+    /* Find the end of the token.  */
+    end = begin + strcspn(begin, delim);
+    if (*end) {
+        /* Terminate the token and set *STRINGP past NUL character.  */
+        *end++ = '\0';
+        *stringp = end;
+    } else
+        /* No more delimiters; this is the last token.  */
+        *stringp = NULL;
+    return begin;
+}
+
+
+char *strdup(const char *restrict s) {
+    size_t len = strlen(s) + 1;
+    void *new = kalloc(len);
+
+    if (new == NULL)
+        return NULL;
+
+    return (char *) memcpy(new, s, len);
+}
+

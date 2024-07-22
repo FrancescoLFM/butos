@@ -15,8 +15,7 @@ int getchar()
         while (queue_empty(input_buffer));
         c = queue_dequeue(input_buffer);
     } while (c == '\t');
-
-    putc(c);
+	
     return c;
 }
 

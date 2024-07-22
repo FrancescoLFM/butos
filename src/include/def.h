@@ -8,6 +8,9 @@
 
 #define NULL    ((void*)(0))
 
+#define EXIT_SUCCESS        1
+#define EXIT_FAILURE        0
+
 typedef unsigned long int size_t;
 
 typedef unsigned long int   u32;

@@ -7,7 +7,7 @@
 #include <libs/scan.h>
 #include <libs/alloc.h>
 
-void test_scan()
+int test_scan()
 {
     const size_t SIZE = 50;
     char *buffer;
@@ -16,7 +16,7 @@ void test_scan()
     buffer = kalloc(SIZE * sizeof(*buffer));
     if (!buffer) {
         puts("Failed to allocate buffer\n");
-        return;
+        return 1;
     }
 
     for (char *tok;;) {
@@ -32,6 +32,7 @@ void test_scan()
             puts("\n");
         }
     }
+    return 0;
 }
 
 void test_allocator()

@@ -5,7 +5,10 @@
 #include <drivers/vga.h>
 #include <drivers/keyboard.h>
 #include <libs/alloc.h>
+#include <cpu/proc.h>
+#include <libs/shell.h>
 
+/*
 void test_ata();
 void test_string();
 void test_allocator();
@@ -13,6 +16,7 @@ void test_scan();
 void test_ata_io();
 void test_pci();
 void test_ide_controller();
+*/
 
 void _start()
 {
@@ -33,10 +37,7 @@ void _start()
     vga_open();
 
     vga_clear(BLACK);
-
-    test_ide_controller();
-    test_ata_io();
-    test_scan();
+    proot_init(shell_init);
 
     stop();
 }
