@@ -4,8 +4,13 @@
 #include <libs/scan.h>
 #include <libs/shell.h>
 #include <libs/string.h>
+#include <drivers/vga.h>
+#include <libs/atoi.h>
 
 static struct var_array *var_array_container;
+static uint8_t shell_color = GREEN;
+
+char *var_resolve(char *name);
 
 void var_array_alloc() {
     var_array_container = kalloc(sizeof(*var_array_container));
@@ -47,14 +52,40 @@ struct var *var_alloc() {
     return var_array_container->array[var_array_container->size++];
 }
 
+
+struct var *var_search(char *name) {
+    for (size_t i=0; i<var_array_container->size; i++)
+        if(strcmp(var_array_container->array[i]->name, name) == 0) 
+            return var_array_container->array[i];
+
+    return NULL;
+}
+
+char *var_resolve(char *name) {
+    struct var *v;
+
+    if((v = var_search(name)) != NULL)
+        return v->value;
+
+    return NULL;
+}
+
 /* Builtin commands section start */
 int set_var_str(char **args, size_t argc) {
-    // TODO Controlla se la variabile esiste già (sovrascrivila)
     struct var *var;
+    struct var *old_var;
 
     if (argc < 2) {
         puts("set usage: set [var] [value]\n");
         return EXIT_FAILURE;
+    }
+
+    /* Sovrascrivi se esistente */
+    if ((old_var = var_search(args[0])) != NULL) {
+        kfree(old_var->value);
+        old_var->value = strdup(args[1]);
+        old_var->is_number = 0;
+        return EXIT_SUCCESS;
     }
 
     var = var_alloc();
@@ -65,14 +96,21 @@ int set_var_str(char **args, size_t argc) {
     return EXIT_SUCCESS;
 }
 
-/* Builtin commands section start */
 int set_var_int(char **args, size_t argc) {
-    // TODO Controlla se la variabile esiste già (sovrascrivila)
     struct var *var;
+    struct var *old_var;
 
     if (argc < 2) {
         puts("set usage: set [var] [value]\n");
         return EXIT_FAILURE;
+    }
+
+    /* Sovrascrivi se esistente */
+    if ((old_var = var_search(args[0])) != NULL) {
+        kfree(old_var->value);
+        old_var->value = strdup(args[1]);
+        old_var->is_number = 1;
+        return EXIT_SUCCESS;
     }
 
     var = var_alloc();
@@ -80,6 +118,18 @@ int set_var_int(char **args, size_t argc) {
     var->value = strdup(args[1]);
     var->is_number = 1;
 
+    return EXIT_SUCCESS;
+}
+
+int print_vars(char **args, size_t argc) {
+    /* Ho inserito questa riga di codice per non far incazzare gcc */
+    if (argc > 1) {
+        printk("Unsupported argument: %s", args[0]);
+        return EXIT_FAILURE;
+    }
+
+    for (size_t i=0; i<var_array_container->size; i++)
+        printk("%s: %s\n", var_array_container->array[i]->name, var_array_container->array[i]->value);
     return EXIT_SUCCESS;
 }
 
@@ -91,6 +141,36 @@ int print_program(char **args, size_t argc) {
     putc('\n');
     return 0;
 }
+
+int clear_command(char **args, size_t argc) {
+    uint8_t bg_color; 
+
+    bg_color = BLACK;
+
+    if (argc > 0) {
+        if (strcmp(args[0], "macos") == 0)
+            bg_color = STD_COLOR;
+        else if (strcmp(args[0], "windows") == 0)
+            bg_color = BLUE;
+        else
+            bg_color = (uint8_t) atoi(args[0]) & WHITE;
+    }
+
+    vga_clear(bg_color);
+
+    return EXIT_SUCCESS;
+}
+
+int setcolor_command(char **args, size_t argc) {
+    if (argc == 0) {
+        puts("setcolor usage: setcolor [color]");
+        return EXIT_FAILURE;
+    }
+    shell_color = (uint8_t) atoi(args[0]) & WHITE;
+
+    return EXIT_SUCCESS;
+}
+
 /* Builtin commands section end */
 
 //* Args can't be null
@@ -104,15 +184,6 @@ size_t args_get_count(char *args) {
     }
 
     return count;
-}
-
-char *var_resolve(char *name) {
-
-    for (size_t i=0; i<var_array_container->size; i++)
-        if(strcmp(var_array_container->array[i]->name, name) == 0) 
-            return var_array_container->array[i]->value;
-
-    return NULL;
 }
 
 //* Return value has to be kfreed
@@ -205,7 +276,7 @@ int builtin_program_execute(struct command *cmd) {
 }
 
 void shell_prompt() {
-    puts_c(GREEN, "$ ");
+    puts_c(shell_color, "butosh $ ");
 }
 
 char *shell_alloc_buffer() {
@@ -263,6 +334,16 @@ int butosh_interpret(char *input_raw) {
     return errno;
 }
 
+void load_default_var() {
+    butosh_interpret("set black 0");
+    butosh_interpret("set blue 1");
+    butosh_interpret("set green 2");
+    butosh_interpret("set red 4");
+    butosh_interpret("set white 7");
+}
+
+
+
 int shell_init() {
     uint32_t rel_pos;
     char *buff;
@@ -276,6 +357,7 @@ int shell_init() {
         shell_dealloc_buffer(buff);
         return EXIT_FAILURE;
     }
+    load_default_var();
     for(;;) {
         shell_prompt();
         shell_scan(buff, rel_pos);
