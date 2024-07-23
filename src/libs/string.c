@@ -94,22 +94,33 @@ int strncmp(const char *s1, const char *s2, size_t n)
 
 char *strchr(const char *s, int c)
 {
-    while (*s && *s != c) s++;
-    if (*s == c)
-        return (char *)s;
-    return NULL;
+	for (;; ++s) {
+		if (*s == c)
+			return ((char *)s);
+		if (*s == '\0')
+			return (NULL);
+	}
+	/* NOTREACHED */
 }
 
 char *strrchr(const char *s, int c)
 {
-    const char *found;
+    const char *found, *p;
 
-    found = rawmemchr(s, '\0');
-    while (found-->s && *found != c);
-    if (*found == c)
-        return (char *)found;
-    return NULL;
+    c = (unsigned char) c;
 
+    /* Since strchr is fast, we use it rather than the obvious loop.  */
+
+    if (c == '\0')
+        return strchr (s, '\0');
+
+    found = NULL;
+    while ((p = strchr (s, c)) != NULL) {
+      found = p;
+      s = p + 1;
+    }
+
+  return (char *) found;
 }
 
 size_t strlen(const char *s)
@@ -270,12 +281,13 @@ char *strsep(char **stringp, const char *delim)
 
 
 char *strdup(const char *restrict s) {
-    size_t len = strlen(s) + 1;
-    void *new = kalloc(len);
+    size_t len;
+	char *copy;
 
-    if (new == NULL)
-        return NULL;
-
-    return (char *) memcpy(new, s, len);
+	len = strlen(s) + 1;
+	if (!(copy = (char *) kcalloc(len, sizeof(char))))
+		return (NULL);
+	memcpy(copy, s, len);
+	return (copy);
 }
 
