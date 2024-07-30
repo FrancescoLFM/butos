@@ -8,14 +8,17 @@
 
 #define NULL    ((void*)(0))
 
-#define EXIT_SUCCESS        1
-#define EXIT_FAILURE        0
+#define EXIT_SUCCESS        0
+#define EXIT_FAILURE        1
 
 typedef unsigned long int size_t;
 
 typedef unsigned long int   u32;
 typedef unsigned short int  u16;
 typedef unsigned char       u8;
+typedef int8_t              i8;
+typedef int16_t             i16;
+typedef int32_t             i32;
 
 
 // attributes
