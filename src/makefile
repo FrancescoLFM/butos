@@ -5,7 +5,7 @@ QEMU = qemu-system-x86_64
 
 FLAGS = -Wall -Wextra -Werror
 FLAGS += -fno-pie -m32
-FLAGS += -O2 -g
+FLAGS += -g
 FLAGS += -I.
 
 CFLAGS = $(FLAGS)
@@ -13,7 +13,7 @@ CFLAGS += -ffreestanding -nostdlib -fno-stack-protector -std=c99 -mgeneral-regs-
 
 LDSCRIPT = butos.ld
 
-SOURCES_C = $(wildcard *.c **/*.c)
+SOURCES_C = $(wildcard *.c **/*.c fs/fat32/*.c)
 SOURCES_ASM = $(wildcard *.s **/*.s)
 
 OBJECTS_C = $(SOURCES_C:.c=.o)

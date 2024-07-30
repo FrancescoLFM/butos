@@ -5,12 +5,12 @@ OUTPUT_ARCH(i386)
 
 MEMORY
 {
-    RAM (rwx) : ORIGIN = 0xf000, LENGTH = 100K
+    RAM (rwx) : ORIGIN = 0x00100000, LENGTH = 10M
 }
 
 SECTIONS
 {
-    . = 0xf000;
+    . = 0x00100000;
     .text : { *(.text) } > RAM
     .data : { *(.data) } > RAM
     .bss : { *(.bss) } > RAM

@@ -37,6 +37,10 @@ _start:
     
     .code32
 init_protected:
+    movl    $(0x0100 * SEC), %ecx
+    movl    $0xf000, %esi
+    movl    $0x00100000, %edi
+    rep movsl
     # Initializing register for the protected mode
     mov     $0x10, %ax
     mov     %ax, %ds
@@ -50,7 +54,7 @@ init_protected:
     mov     %eax, %ecx
     mov     %eax, %edx
     
-    jmp     0xf000
+    jmp     0x00100000
 
     .data
 

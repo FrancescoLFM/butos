@@ -12,9 +12,11 @@ BINFILE	= $(BINDIR)/boot.bin
 QEMUDIR = qemu
 IMG		= $(QEMUDIR)/vhdd.img
 TARGET	= $(IMG)
-SIZE	= 101K
+SIZE	= 200K
 FORMAT  = raw
 VMARGS	= -device piix3-ide,id=ide -drive id=disk,file=$(IMG),format=$(FORMAT),if=none -device ide-hd,drive=disk,bus=ide.0 -m 2G -vnc :0
+
+PART	= $(QEMUDIR)/fatpart.img
 
 DBG     = gdb
 DBGSYM  = src/butos
@@ -31,6 +33,8 @@ all:
 	$(call color_text,91,"[MAKE] Compilazione del bootloader in real mode")
 	make -C $(INITDIR)
 	make $(TARGET)
+	$(call color_text,91,"[MAKE] Creazione della partizione FAT32")
+	mkfs.fat -F 32 --mbr=y --offset=203 -v $(TARGET)
 
 $(TARGET): $(BINFILE)
 	$(call color_text,91,"[MAKE] Generazione del disco avviabile")
