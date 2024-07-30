@@ -3,6 +3,7 @@
 #include <cpu/idt.h>
 #include <cpu/pic.h>
 #include <libs/print.h>
+#include <drivers/vga.h>
 
 extern const uint32_t volatile isrs[ISR_NUM];
 extern const uint32_t volatile irqs[IRQ_NUM];
@@ -65,8 +66,20 @@ char *isr_msg[] = {
     "Machine Check"
 };
 
+void print_registers(struct registers_t *regs)
+{
+    printk("EAX: 0x%x\t%u\n", regs->eax, regs->eax);
+    printk("EBX: 0x%x\t%u\n", regs->ebx, regs->ebx);
+    printk("ECX: 0x%x\t%u\n", regs->ecx, regs->ecx);
+    printk("EDX: 0x%x\t%u\n", regs->edx, regs->edx);
+    printk("EIP: 0x%x\t%u\n", regs->eip, regs->eip);
+}
+
+/* Replace with kernel panic */
 void isr_handler(struct registers_t *regs)
 {
+    puts("KERNEL PANIC\n============================================\n");
+    print_registers(regs);
     puts("CPU exception: ");
 
     if(regs->isr_no < ARR_SIZE(isr_msg))
@@ -75,7 +88,7 @@ void isr_handler(struct registers_t *regs)
         puts("Reserved");
 }
 
-struct idt_descriptor{
+struct idt_descriptor {
     uint16_t limit;
     uint32_t base;
 } __attribute__((packed));
