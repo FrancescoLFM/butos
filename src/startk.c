@@ -7,6 +7,9 @@
 #include <libs/alloc.h>
 #include <cpu/proc.h>
 #include <libs/shell.h>
+#include <cpu/paging.h>
+
+void fs_test();
 
 /*
 void test_ata();
@@ -20,8 +23,8 @@ void test_ide_controller();
 
 void _start()
 {
-    void *heap_start = (void *) 0x200000;
-    size_t heap_size = 100000;
+    void *heap_start = (void *) 0x07E00;
+    size_t heap_size = 492032;
     void *registry_start = (unsigned char *)heap_start + heap_size;
     size_t registry_capacity = 100 * 8;
 
@@ -33,11 +36,15 @@ void _start()
     );
 
     isr_install();
-    keyboard_start(100);
+    paging_init();
+
+    // keyboard_start(100);
     vga_open();
 
     vga_clear(BLACK);
-    proot_init(shell_init);
+    fs_test();
+
+    // proot_init(shell_init);
 
     stop();
 }
