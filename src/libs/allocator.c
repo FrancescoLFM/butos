@@ -1,7 +1,7 @@
-#include <stdint.h>
 #include <libs/string.h>
 #include <libs/print.h> /* debug */
 #include <include/asm.h> /* stop() */
+#include <include/def.h>
 
 #include <libs/allocator.h>
 
@@ -18,7 +18,7 @@
 static
 int memspace_overlap(struct memspace *m1, struct memspace *m2)
 {
-    return MAX(m1->start, m2->start) <= MIN(MEMSPACE_END(m1), MEMSPACE_END(m2));
+    return MAX(m1->start, m2->start) < MIN(MEMSPACE_END(m1), MEMSPACE_END(m2));
 }
 
 /**
@@ -99,19 +99,16 @@ void allocator_unregister(allocator_t *a, size_t index)
 void *allocator_alloc(allocator_t *a, size_t size)
 {
     struct memspace m;
-    size_t i;
 
     /* allocatore pieno */
     if (allocator_full(a) || size == 0)
         return NULL;
-
-    m.size = size;
-    m.start = a->heap.start;
-
+    
     /* skip overlapping blocks */
-    for (i = 0; i < a->size && memspace_overlap(&m, &a->registry[i]); i++)
-        m.start += a->registry[i].size;
-
+    m.start = a->heap.start;
+    m.size = size;
+    for (size_t i = 0; i < a->size && memspace_overlap(&m, &a->registry[i]); i++)
+        m.start = a->registry[i].start + a->registry[i].size;
     /**
      * Check if the block we found lives all inside the heap.
      * In teoria se tutto è stato fatto bene serve farlo solo
@@ -119,7 +116,6 @@ void *allocator_alloc(allocator_t *a, size_t size)
      */
     if (!memspace_enclosed(&a->heap, &m))
         return NULL;
-
     /* puts m in the registy while preserving sorting */
     allocator_register(a, &m);
     

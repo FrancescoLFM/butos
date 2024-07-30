@@ -46,3 +46,8 @@ void *krealloc(void *ptr, size_t size)
 {
     return allocator_realloc(kallocator, ptr, size);
 }
+
+void kalloc_print()
+{
+    allocator_print(kallocator, 0);
+}
