@@ -6,8 +6,6 @@
 #include <drivers/pci.h>
 #include <cpu/idt.h>
 
-#define DEBUG
-
 void switch_compatibily_mode(struct pci_device_info *pci_dev)
 {
     uint32_t reg_two = REG2(pci_dev->bus, pci_dev->device_number);
@@ -73,7 +71,7 @@ struct ata_drive *ata_drive_init(uint8_t channel_n, uint8_t drive_n, struct pci_
 
 uint8_t ata_read(struct ata_drive *drive_ptr, uint8_t reg)
 {
-    uint16_t result = 0;
+    uint8_t result = 0;
 
     result = inb(drive_ptr->channel->base + reg);
 
@@ -152,6 +150,33 @@ uint8_t ata_drive_read_buffer(struct ata_drive *drive_ptr, uint8_t *buffer, uint
         }
             
         data = ata_read_word(drive_ptr, ATA_REG_DATA);
+        
+        buffer[i++] = (uint8_t) (data & 0xFF);
+        buffer[i++] = (uint8_t) (data >> 8);
+    } while (i < buff_len);
+
+    return err;
+}
+
+uint8_t ata_drive_read_buffer_reverse(struct ata_drive *drive_ptr, uint8_t *buffer, uint32_t buff_len)
+{
+    uint32_t i = 0;
+    uint16_t data;
+    uint8_t err = 0;
+
+    do {
+        if((err = ata_drive_wait(drive_ptr))) {
+            #ifdef DEBUG
+
+            puts_c(RED, "Buffer read ERROR\n");
+            printk("Error flag: 0x%x\n", err);
+            
+            #endif
+            return err;
+        }
+            
+        data = ata_read_word(drive_ptr, ATA_REG_DATA);
+        
         buffer[i++] = (uint8_t) (data >> 8);
         buffer[i++] = (uint8_t) (data & 0xFF);
     } while (i < buff_len);
@@ -174,7 +199,7 @@ uint8_t ata_drive_identify(struct ata_drive *drive_ptr)
         return ATA_NOT_FOUND;
     }
 
-    if(ata_drive_read_buffer(drive_ptr, buffer, ATA_IDENT_BYTES))
+    if(ata_drive_read_buffer_reverse(drive_ptr, buffer, ATA_IDENT_BYTES))
         return ATA_NOT_FOUND;
 
     drive_ptr->ident->type = (buffer[ATA_IDENT_CONF] >> ATA_IDENT_TYPE_BIT);
@@ -249,8 +274,8 @@ void ata_drive_access_pio(struct ata_drive *drive_ptr, uint8_t direction, uint8_
                 return;
             }
             
-            rw_val = (uint16_t) (buff[i++]) << 8;
-            rw_val |= buff[i++];
+            rw_val = buff[i++];
+            rw_val |= (uint16_t) (buff[i++]) << 8;
             ata_write_word(drive_ptr, ATA_REG_DATA, rw_val);
         } while (i < buff_len);
 
@@ -275,6 +300,13 @@ void ata_drive_write_pio(struct ata_drive *drive_ptr, uint8_t sector_n, uint32_t
     return;
 }
 
+
+uint8_t ata_drive_get_status(struct ata_drive *drive_ptr)
+{
+    uint8_t status = ata_read(drive_ptr, ATA_REG_ALTSTATUS);
+    
+    return status;
+}
 
 void ata_drive_print_status(struct ata_drive *drive_ptr)
 {
