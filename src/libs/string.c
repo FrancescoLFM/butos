@@ -166,11 +166,8 @@ char *strncpy(char *restrict dest, const char *restrict src, size_t n)
     char *start = dest;
 
     while (*src && n-->0)
-        *start++ = *dest++;
-    /* oss: se esco per *src = '\0', n non viene aggiornato.
-     * se è ancora non consumato ne gioco uno per copiare il
-     * terminatore */
-    if (n > 0) *start = *dest;
+        *start++ = *src++;
+    *start = '\0';
 
     return dest;
 }
