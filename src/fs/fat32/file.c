@@ -107,6 +107,7 @@ file_t *file_open_path(fat_fs_t *fs, char *path)
     if (ret->path != NULL)
         rstrip_path(ret->path);
 
+    kfree(entry);
     return ret;
 }
 

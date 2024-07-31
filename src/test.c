@@ -253,6 +253,7 @@ void disk_test() {
 }
 
 void fs_test() {
+    //* SOLVE MEMORY LEAKS
     struct disk *disk;
     fat_fs_t *fs;
     file_t *file;
@@ -266,23 +267,35 @@ void fs_test() {
     if (fs == NULL)
          return;
     fat_fs_printinfo(fs);
+
     if(file_create(fs, "/", "prova.txt")) {
-        puts("TEST 0: NOT PASSED");
+        puts("FILESYSTEM TEST 0: NOT PASSED\n");
         return;
-    };
+    } else {
+        puts("FILESYSTEM TEST 0: PASSED\n"); 
+    }
     file = file_open_path(fs, "/prova.txt");
     if (file == NULL) {
-        puts("TEST 1: NOT PASSED");
+        puts("FILESYSTEM TEST 1: NOT PASSED\n");
         return;
+    } else {
+        puts("FILESYSTEM TEST 1: PASSED\n");
     }
 
-    file_writeb(file, fs, 0, 0x0C);
-    uint8_t read = file_readb(file, fs, 0);
-    if (read != 0x0C)
+    char *string_test = "This is a test";
+    file_write(file, fs, 0, (uint8_t *) string_test, 15);
+    uint8_t *read = file_read(file, fs, 0, 15);
+    puts((char *)read);
+    putc('\n');
+    if (strncmp(string_test, (char *) read, 15))
         puts("FILESYSTEM TEST 2: NOT PASSED\n");
     else
         puts("FILESYSTEM TEST 2: PASSED\n");
     
+    kfree(read);
+    file_close(fs, file);
     fat_fs_fini(fs);
     disk_fini(disk);
+
+    kalloc_print();
 }

@@ -59,8 +59,9 @@ struct disk *disk_init(DISK_TYPE type) {
             return NULL;
         }
 
+        devs_list_destroy(devs);
+        
         disk->part_offset = 0;
-
         break;
     }
     return disk;
