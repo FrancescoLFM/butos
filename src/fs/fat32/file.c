@@ -94,12 +94,9 @@ file_t *file_open_path(fat_fs_t *fs, char *path)
         return NULL;
 
     dir_scan(fs, starting_dir);
-    printk("First entry dir: 0x%x\n", (uint32_t)starting_dir->entries[0]);
     entry = dir_search_path(fs, starting_dir, path);
-    if (entry == NULL) { //! FALLISCE QUI
-        puts("nessuna entry\n");
+    if (entry == NULL) 
         return NULL;
-    }
     if (entry->attr != FILE_ATTR) {
         kfree(entry);
         return NULL;
@@ -192,7 +189,6 @@ uint8_t file_create(fat_fs_t *fs, char *path, char *filename)
         return EXIT_FAILURE;
     }
     file_entry = file_entry_create(filename, cluster);
-    printk("file entry: 0x%x\n", (uintptr_t)file_entry);
     if (file_entry == NULL) {
         dir_close(fs, dir);
         return EXIT_FAILURE;

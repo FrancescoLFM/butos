@@ -21,12 +21,7 @@ cache_t *cache_init(size_t cache_size, size_t block_size, uint8_t *(*read_fun)(f
 
     cache->read = read_fun;
     cache->write = write_fun;
-
-    puts("CACHE INIT\n");
-    printk("CACHE SIZE: %d\n", cache->cache_size);
-    printk("BLOCK SIZE: %d\n", cache->block_size);
-    printk("LINES ADDR: 0x%x\n", (uint32_t) cache->lines);
-
+    
     return cache;
 }
 

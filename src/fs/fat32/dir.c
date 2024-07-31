@@ -74,7 +74,6 @@ void dir_entry_create(fat_fs_t *fs, dir_t *dir, entry_t *entry)
 
     while (offset < dir->ident->entry->size) {
         entry_tag = file_readb(dir->ident, fs, offset);
-        printk("Entry tag: %d\n", entry_tag);
         if (entry_tag == 0 || entry_tag == (uint8_t) INVALID_ENTRY) {
             file_write(dir->ident, fs, offset, (uint8_t *) entry, sizeof(*entry));
             return;
@@ -113,8 +112,6 @@ entry_t *dir_read_entry(fat_fs_t *fs, dir_t *dir, size_t offset)
 
     ret = kcalloc(1, sizeof(*ret));
     raw_entry = file_read(dir->ident, fs, offset, sizeof(*ret));
-    printk("raw entry: 0x%x\n", raw_entry);
-    printk("ret short name: 0x%x\n", ret->short_name);
     strncpy(ret->short_name, (char *) raw_entry, SHORT_NAME_LEN);
     ret->attr = raw_entry[ATTR_OFFSET];
     ret->low_cluster = BYTES_TO_WORD(raw_entry, LOW_CLUSTER_OFFSET);
@@ -140,7 +137,6 @@ void dir_scan(fat_fs_t *fs, dir_t *dir)
             offset += sizeof(entry_t);
         if (entry_attr != 0) {
             temp_entry = dir_read_entry(fs, dir, offset);
-            printk("temp entry: 0%x\n", (uintptr_t) temp_entry);
             if (temp_entry->short_name[0] != INVALID_ENTRY && temp_entry->short_name[0] != '\0') {
                 if (dir->entries[i] != NULL)
                     kfree(dir->entries[i]);
@@ -197,9 +193,6 @@ entry_t *dir_search(dir_t *dir, char *name)
     size_t i = 0;
     entry_t *ret;
 
-    printk("Filename: %s\n", name);
-    printk("Dir: 0x%x\n", (uint32_t) dir);
-
     do {
         if(dir->entries[i] != NULL &&
             !compare_short_name(dir->entries[i]->short_name, name)) {
@@ -229,10 +222,8 @@ entry_t *dir_search_path(fat_fs_t *fs, dir_t *dir, char *path)
     filename[i] = '\0';
 
     entry = dir_search(curr_dir, filename);
-    if (entry == NULL) { //! Fallisce qui
-        puts("Entry non trovata 2\n");
+    if (entry == NULL)
         return NULL;
-    }
     
     if (*path == '/') {
         curr_dir = dir_init(fs, entry);
