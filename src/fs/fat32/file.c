@@ -64,9 +64,24 @@ uint8_t *file_read(file_t *file, fat_fs_t *fs, uint32_t offset, size_t size)
 void file_writeb(file_t *file, fat_fs_t *fs, uint32_t offset, uint8_t data)
 {
     uint32_t cluster;
+    uint32_t cluster_chain_len;
+    uint32_t new_cluster;
+    uint32_t curr_cluster;
 
     if (offset > file->entry->size)
-        return;
+        file->entry->size = offset;
+
+    cluster_chain_len = cluster_chain_get_len(fs, file->cluster);
+    printk("Cluster chain len: %d\n", cluster_chain_len);
+    printk("Entry size: %d\n", file->entry->size);
+    if (((file->entry->size - 1) / fs->volume->cluster_sizeb) + 1 > cluster_chain_len) {
+        curr_cluster = file->cluster;
+        for (uint32_t i=0; i < (file->entry->size / fs->volume->cluster_sizeb); i++) {
+            new_cluster = fat_table_alloc_cluster(fs, EOC1);
+            fat_table_write(fs, curr_cluster, new_cluster);
+            curr_cluster = new_cluster;
+        }
+    }
 
     cluster = cluster_chain_read(fs, file->cluster, offset / fs->volume->cluster_sizeb);
     return cache_writeb(file->cache, fs, cluster, offset, data);
