@@ -8,6 +8,7 @@
 #include <libs/alloc.h>
 #include <fs/disk.h>
 #include <fs/fat.h>
+#include <libs/syscalls.h>
 
 int test_scan()
 {
@@ -253,7 +254,6 @@ void disk_test() {
 }
 
 void fs_test() {
-    //* SOLVE MEMORY LEAKS
     struct disk *disk;
     fat_fs_t *fs;
     file_t *file;
@@ -298,4 +298,15 @@ void fs_test() {
     disk_fini(disk);
 
     kalloc_print();
+}
+
+void syscall_test() {
+    void *buff = NULL;
+    char c = 0;
+    kalloc_syscall(&buff, 32);
+    printf_syscall("Buffer: 0x%x\n", (uintptr_t) buff);
+    kfree_syscall(buff);
+    kalloc_print();
+    getchar_syscall(&c);
+    clear_syscall(BLACK);
 }

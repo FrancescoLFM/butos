@@ -6,7 +6,8 @@
 #define ISR_NUM         32
 #define IRQ_NUM         16
 #define IRQ(num)        ((ISR_NUM) + (num))
-#define IDT_ENTRIES     ((ISR_NUM) + (IRQ_NUM))
+#define IDT_ENTRIES     255
+#define BUTOS_INT       0x80
 
 void isr_install();
 

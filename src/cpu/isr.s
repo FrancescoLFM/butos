@@ -3,6 +3,7 @@
 
     .global isrs
     .global irqs
+    .global butos_int
 
 isr_common:
     pusha
@@ -220,6 +221,23 @@ irq15:
     push    $0x2f
     jmp     irq_common
 
+syscall_common:
+    pusha
+    mov     %ds, %eax
+    push    %eax
+
+    push    %esp
+    sti
+    call    syscall_handler
+    add     $0x08, %esp
+    popa
+    add     $0x08, %esp
+    iret
+
+software_int:
+    push    $0x00
+    push    $0x80
+    jmp     syscall_common
     .data
 isrs:
     .long isr0
@@ -273,3 +291,5 @@ irqs:
     .long irq14
     .long irq15
 
+butos_int:
+    .long software_int

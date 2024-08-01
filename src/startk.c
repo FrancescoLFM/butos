@@ -10,6 +10,7 @@
 #include <cpu/paging.h>
 
 void fs_test();
+void syscall_test();
 
 /*
 void test_ata();
@@ -35,15 +36,15 @@ void _start()
         registry_capacity
     );
 
-    isr_install();
-    paging_init();
-
-    // keyboard_start(100);
     vga_open();
-
     vga_clear(BLACK);
-    fs_test();
 
+    isr_install();
+    keyboard_start(100);
+
+    paging_init();
+    syscall_test();
+    //fs_test();
     // proot_init(shell_init);
 
     stop();
