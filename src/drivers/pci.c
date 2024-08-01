@@ -206,6 +206,7 @@ void devs_list_destroy(struct devs_list *devs)
         kfree(devs->buffer[i]);
     }
     kfree(devs->buffer);
+    kfree(devs);
 }
 
 struct devs_list *devs_list_init(size_t len)
