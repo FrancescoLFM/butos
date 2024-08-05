@@ -13,7 +13,7 @@ CFLAGS += -ffreestanding -nostdlib -fno-stack-protector -std=c99 -mgeneral-regs-
 
 LDSCRIPT = butos.ld
 
-SOURCES_C = $(wildcard *.c **/*.c fs/fat32/*.c)
+SOURCES_C = $(wildcard *.c cpu/*.c drivers/*.c fs/*.c libs/*.c fs/fat32/*.c)
 SOURCES_ASM = $(wildcard *.s **/*.s)
 
 OBJECTS_C = $(SOURCES_C:.c=.o)
