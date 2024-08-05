@@ -11,20 +11,27 @@ Built with https://tree.nathanfriend.io/
 butos/
 ├── init/
 │   ├── include/
-│   └── libs/
+│   ├── libs/
+│   └── mbr/
 └── src/
-    ├── include/
-    ├── butos/
+    ├── boot/
+    │   └── boot
     ├── cpu/
     ├── drivers/
-    └── libs/
+    ├── fs/
+    ├── include/
+    ├── libs/
+    └── butos
 ```
 
-- `init`: contains the real mode **bootloader** for the *butos kernel*
-    - `include`: continene of **macros** for the gnu-as assembler with the goal of making assembly code more readable
+- `init`: contains the real mode **bootloader** for the *second stage butos bootloader*
+    - `include`: contains **macros** for the gnu-as assembler with the goal of making assembly code more readable
     - `libs`: contains **assembly libraries** with useful *functions* for bootloader operation
+    - `mbr`: contains **Master Boot Record data**
 - `src`: contains the C code of the 32-bit **butos kernel**
     - `include`: contains some **macros** which can be useful throughout the project
+    - `boot`: contains the **second stage bootloader** which start the kernel
+    - `fs`: contains the **filesystem libraries**
     - `butos`: contains the **binary** executable of butos
     - `cpu`: contains **drivers** to handle interrupts and other **cpu features**
     - `drivers`: contains **drivers** for **hardware** components accessible via the system bus

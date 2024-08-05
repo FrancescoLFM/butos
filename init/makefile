@@ -33,7 +33,7 @@ $(BINARY): $(EXECUTABLE)
 	$(call color_text,33,"[INIT] Generazione del binario $(BINARY)")
 	strip --remove-section=.note.gnu.property $^
 	objcopy -O binary -S $^ $@
-	printf "\x55\xaa" | dd of=$@ bs=1 seek=510 count=2 conv=notrunc
+	/usr/bin/printf "\x55\xaa" | dd of=$@ bs=1 seek=510 count=2 conv=notrunc
 	make -C mbr/
 	cat mbr/bootstrap.bin bootloader.bin > boot.bin
 

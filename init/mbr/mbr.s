@@ -43,3 +43,13 @@ PT1:
     .long 1
     .long 202
 
+PT2:
+    .byte 0x80 # Active partition
+    .word 0
+    .byte 0
+    .byte 0xC  # FAT32 with lba
+    .word 0
+    .byte 0
+    .long 203
+    .long 65312
+

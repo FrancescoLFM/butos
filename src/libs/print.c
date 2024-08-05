@@ -118,7 +118,6 @@ int base_convert(char *buffer, size_t size, uint32_t num, uint32_t base)
     return length;
 }
 
-static
 int vprintk_c(uint8_t color, char *str, va_list list)
 {
     char buffer[80];

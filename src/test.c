@@ -6,8 +6,11 @@
 #include <libs/allocator.h>
 #include <libs/scan.h>
 #include <libs/alloc.h>
+#include <fs/disk.h>
+#include <fs/fat.h>
+#include <libs/syscalls.h>
 
-void test_scan()
+int test_scan()
 {
     const size_t SIZE = 50;
     char *buffer;
@@ -16,7 +19,7 @@ void test_scan()
     buffer = kalloc(SIZE * sizeof(*buffer));
     if (!buffer) {
         puts("Failed to allocate buffer\n");
-        return;
+        return 1;
     }
 
     for (char *tok;;) {
@@ -32,6 +35,7 @@ void test_scan()
             puts("\n");
         }
     }
+    return 0;
 }
 
 void test_allocator()
@@ -102,10 +106,10 @@ void test_ata()
     struct ata_drive *ata_drive_ptr;
     struct devs_list *devs;
 
-    devs = devs_list_init();
+    devs = devs_list_init(5);
     if (devs == NULL)
         return;
-    pci_scan_devices(devs);
+    pci_scan_devices(devs, 5);
 
     ata_drive_ptr = NULL;
     for (size_t n=0; n < devs->len; n++)
@@ -121,7 +125,7 @@ void test_ata()
     ata_drive_fini(ata_drive_ptr);
 }
 
-#define SECTOR_SELECTED 0
+#define SECTOR_SELECTED 203
 #define WORD_PER_ROW    26
 
 void test_ata_io()
@@ -129,12 +133,13 @@ void test_ata_io()
     uint8_t words_readed = 0;
     struct ata_drive *ata_drive_ptr;
     struct devs_list *devs;
+    size_t len;
 
-    devs = devs_list_init();
+    len = pci_get_device_num();
+    devs = devs_list_init(len);
     if (devs == NULL)
         return;
-    pci_scan_devices(devs);
-
+    pci_scan_devices(devs, len);
 
     uint8_t *sector_buff = kalloc(ATA_SECTOR_SIZE);
     if (sector_buff == NULL) {
@@ -182,10 +187,10 @@ void test_pci()
 {
     struct devs_list *devs;
 
-    devs = devs_list_init();
+    devs = devs_list_init(5);
     if (devs == NULL)
         return;
-    pci_scan_devices(devs);
+    pci_scan_devices(devs, 5);
 
     for (size_t i = 0; i < devs->len; i++) {
             if (devs->buffer[i]->device_id != 0xFFFF) {
@@ -221,3 +226,87 @@ void test_ide_controller()
         }
 }
 
+void disk_test() {
+    struct disk *disk;
+    uint8_t first_sector[512];
+    
+    disk = disk_init(ATA_DRIVE);
+    if (disk == NULL)
+        return;
+
+    puts("Disk initialized!\n");
+    printk("Disk type 0x%x\n", disk->type);
+    disk_set_offset(disk, FAT_PART_TYPE);
+    printk("Disk part offset 0x%x\n", disk->part_offset);
+    disk_read(disk, 1, 0, first_sector);
+
+    uint8_t words_readed = 0;
+
+    for (uint32_t i=0; i < ATA_SECTOR_SIZE; i++) {
+        printk("%x ", first_sector[i]);
+        
+        if (++words_readed == WORD_PER_ROW) {
+            words_readed = 0;
+            putc('\n');
+
+        }
+    }
+}
+
+void fs_test() {
+    struct disk *disk;
+    fat_fs_t *fs;
+    file_t *file;
+
+    disk = disk_init(ATA_DRIVE);
+    if (disk == NULL)
+        return;
+    disk_set_offset(disk, FAT_PART_TYPE);
+    
+    fs = fat_fs_init(disk);
+    if (fs == NULL)
+         return;
+    fat_fs_printinfo(fs);
+
+    if(file_create(fs, "/", "prova.txt")) {
+        puts("FILESYSTEM TEST 0: NOT PASSED\n");
+        return;
+    } else {
+        puts("FILESYSTEM TEST 0: PASSED\n"); 
+    }
+    file = file_open_path(fs, "/prova.txt");
+    if (file == NULL) {
+        puts("FILESYSTEM TEST 1: NOT PASSED\n");
+        return;
+    } else {
+        puts("FILESYSTEM TEST 1: PASSED\n");
+    }
+
+    char *string_test = "This is a test";
+    file_write(file, fs, 0, (uint8_t *) string_test, 15);
+    uint8_t *read = file_read(file, fs, 0, 15);
+    puts((char *)read);
+    putc('\n');
+    if (strncmp(string_test, (char *) read, 15))
+        puts("FILESYSTEM TEST 2: NOT PASSED\n");
+    else
+        puts("FILESYSTEM TEST 2: PASSED\n");
+    
+    kfree(read);
+    file_close(fs, file);
+    fat_fs_fini(fs);
+    disk_fini(disk);
+
+    kalloc_print();
+}
+
+void syscall_test() {
+    void *buff = NULL;
+    char c = 0;
+    kalloc_syscall(&buff, 32);
+    printf_syscall("Buffer: 0x%x\n", (uintptr_t) &buff);
+    kfree_syscall(buff);
+    kalloc_print();
+    getchar_syscall(&c);
+    clear_syscall(BLACK);
+}

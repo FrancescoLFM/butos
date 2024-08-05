@@ -159,7 +159,6 @@ struct pci_device_info *pci_read_device_info(uint8_t bus, uint8_t device, struct
     uint32_t reg_zero = REG0(bus, device);
     uint32_t reg_two = REG2(bus, device);
     uint32_t reg_three = REG3(bus, device);
-    uint32_t reg_fif = REG15(bus, device);
 
     pci_dev->bus = bus;
     pci_dev->device_number = device;
@@ -170,8 +169,6 @@ struct pci_device_info *pci_read_device_info(uint8_t bus, uint8_t device, struct
     pci_dev->subclass = REG_BYTE(reg_two, SUBCLASS_OFFSET);
     pci_dev->class_code = REG_BYTE(reg_two, CLASSCODE_OFFSET);
     pci_dev->header_type = REG_BYTE(reg_three, HEADERTYPE_OFFSET);
-    pci_dev->int_line = reg_fif = REG_BYTE(reg_fif, INTLINE_OFFSET);
-    pci_dev->int_PIN = reg_fif = REG_BYTE(reg_fif, INTPIN_OFFSET);
 
     return pci_dev;
 }
@@ -209,15 +206,18 @@ void devs_list_destroy(struct devs_list *devs)
         kfree(devs->buffer[i]);
     }
     kfree(devs->buffer);
+    kfree(devs);
 }
 
-struct devs_list *devs_list_init()
+struct devs_list *devs_list_init(size_t len)
 {
     struct devs_list *ret;
 
     ret = kalloc(sizeof(*ret));
-    ret->len = pci_get_device_num();
-    ret->buffer = kalloc(ret->len * sizeof(struct pci_device_info *));
+    if (ret == NULL)
+        return NULL;
+    ret->len = len;
+    ret->buffer = kcalloc(ret->len, sizeof(struct pci_device_info *));
     if (ret->buffer == NULL)
         return NULL;
     
@@ -233,16 +233,15 @@ struct devs_list *devs_list_init()
     return ret;
 }
 
-void pci_scan_devices(struct devs_list *devs)
+void pci_scan_devices(struct devs_list *devs, size_t devs_n)
 {
     size_t i = 0;
 
-    for (uint16_t bus = 0; bus < 256; bus++)
-        for (uint8_t dev = 0; dev < 32; dev++) {
-            pci_read_device_info(bus, dev, devs->buffer[i]);
-            if (devs->buffer[i]->device_id != 0xFFFF)
-                i++;
-        }
-        
+    for (uint8_t dev = 0; dev < devs_n; dev++) {
+        pci_read_device_info(0, (uint8_t) dev, devs->buffer[i]);
+        if (devs->buffer[i]->device_id != 0xFFFF)
+            i++;
+    }
+
     return;
 }

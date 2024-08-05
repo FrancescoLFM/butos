@@ -91,7 +91,7 @@ const char *pci_get_subclass(uint8_t classcode, uint8_t subclasscode);
 struct pci_device_info *pci_read_device_info(uint8_t bus, uint8_t device, struct pci_device_info *pci_dev);
 uint32_t pci_get_device_num();
 void devs_list_destroy(struct devs_list *devs);
-struct devs_list *devs_list_init();
-void pci_scan_devices(struct devs_list *devs);
+struct devs_list *devs_list_init(size_t len);
+void pci_scan_devices(struct devs_list *devs, size_t devs_n);
 
 #endif

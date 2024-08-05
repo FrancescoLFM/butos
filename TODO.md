@@ -1,18 +1,12 @@
 # Finire la base
-- finire il filesystem FAT32
+- finire il filesystem FAT32 - Almost done
 - aggiungere il supporto agli ELF
 - aggiungere i timer
 - aggiungere i processi
-- aggiustare il bootloader perché funzioni su hardware vero
-- potenziare il boot loader in due fasi
-    - abilitare la a20 line
-    - fare memory mapping
-    - caricare il kernel nella memoria dedicata
 
 # Oltre la base
 ## Roba a basso livello più complicata
-- passare al paging
-- supportare la memoria virtuale
+- supportare lo swapping
 - usare più di un core
     scheduling
     multiprocessing
@@ -28,6 +22,6 @@
 # Creare un parco software
 - scrivere una libreria che consenta di usare l'api del kernel dal C (equivalente di unistd.h per unix)
 - scrivere la libreria standard del C wrappando la nostra api (consente di fare porting di software su butos)
-- scrivere una shell
+- scrivere una shell - ancora da rendere indipendente
 - scrivere un editor di testo
 - scrivere un assembler

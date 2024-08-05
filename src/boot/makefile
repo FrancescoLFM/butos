@@ -1,27 +1,26 @@
 CC = gcc
 OBJCOPY = objcopy
 OBJDUMP = objdump
-QEMU = qemu-system-x86_64
 
 FLAGS = -Wall -Wextra -Werror
 FLAGS += -fno-pie -m32
 FLAGS += -g
-FLAGS += -I.
+FLAGS += -I../.
 
 CFLAGS = $(FLAGS)
 CFLAGS += -ffreestanding -nostdlib -fno-stack-protector -std=c99 -mgeneral-regs-only
 
-LDSCRIPT = butos.ld
+LDSCRIPT = boot.ld
 
-SOURCES_C = $(wildcard *.c cpu/*.c drivers/*.c fs/*.c libs/*.c fs/fat32/*.c)
-SOURCES_ASM = $(wildcard *.s **/*.s)
+SOURCES_C = startk.c ../cpu/paging.c
+SOURCES_ASM = ../cpu/apaging.s
 
 OBJECTS_C = $(SOURCES_C:.c=.o)
 OBJECTS_ASM = $(SOURCES_ASM:.s=.o)
 
 OBJECTS = $(OBJECTS_C) $(OBJECTS_ASM)
-EXECUTABLE = butos
-BINARY = butos.bin
+EXECUTABLE = boot
+BINARY = boot.bin
 
 DEBUG_FILE = debug.dbg
 
@@ -44,10 +43,10 @@ $(EXECUTABLE): $(OBJECTS)
 
 
 $(BINARY): $(EXECUTABLE)
-	$(call color_text,32,"[BUTOS] Compilazione terminata")
-	$(OBJCOPY) --only-keep-debug $< $(DEBUG_FILE)
+	$(call color_text,32,"[BOOTLOADER] Compilazione terminata")
 	$(OBJCOPY) -O binary -S $< $@
-	$(call color_text,32,"[BUTOS] Generazione del binario terminata")
+	$(OBJCOPY) --only-keep-debug $< $(DEBUG_FILE)
+	$(call color_text,32,"[BOOTLOADER] Generazione del binario terminata")
 
 
 .PHONY=clean

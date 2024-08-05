@@ -10,6 +10,14 @@
 .equ    disk_int, 0x13
 .equ    kb_int, 0x16
 
+.equ    bootloader_start, 0x07E00
+.equ    bootloader_size, 0x50
+
+.equ    kernel_start, 0xf000
+.equ    kernel_head, 0x01
+.equ    kernel_sector, 0x04
+.equ    kernel_relocated_mem, 0x100000
+
 .macro start_f
     push    %bp
     mov     %sp, %bp

@@ -8,3 +8,4 @@ bochs*
 *.out
 *.dbg
 butos
+src/boot/boot

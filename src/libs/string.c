@@ -94,22 +94,33 @@ int strncmp(const char *s1, const char *s2, size_t n)
 
 char *strchr(const char *s, int c)
 {
-    while (*s && *s != c) s++;
-    if (*s == c)
-        return (char *)s;
-    return NULL;
+	for (;; ++s) {
+		if (*s == c)
+			return ((char *)s);
+		if (*s == '\0')
+			return (NULL);
+	}
+	/* NOTREACHED */
 }
 
 char *strrchr(const char *s, int c)
 {
-    const char *found;
+    const char *found, *p;
 
-    found = rawmemchr(s, '\0');
-    while (found-->s && *found != c);
-    if (*found == c)
-        return (char *)found;
-    return NULL;
+    c = (unsigned char) c;
 
+    /* Since strchr is fast, we use it rather than the obvious loop.  */
+
+    if (c == '\0')
+        return strchr (s, '\0');
+
+    found = NULL;
+    while ((p = strchr (s, c)) != NULL) {
+      found = p;
+      s = p + 1;
+    }
+
+  return (char *) found;
 }
 
 size_t strlen(const char *s)
@@ -155,11 +166,8 @@ char *strncpy(char *restrict dest, const char *restrict src, size_t n)
     char *start = dest;
 
     while (*src && n-->0)
-        *start++ = *dest++;
-    /* oss: se esco per *src = '\0', n non viene aggiornato.
-     * se è ancora non consumato ne gioco uno per copiare il
-     * terminatore */
-    if (n > 0) *start = *dest;
+        *start++ = *src++;
+    *start = '\0';
 
     return dest;
 }
@@ -228,5 +236,55 @@ char *strtok(char *restrict str, const char *restrict delim)
     }
 
     return p;
+}
+
+size_t strcspn(const char *s1, register const char *s2)
+{
+	register const char *p, *spanp;
+	register char c, sc;
+
+	/*
+	 * Stop as soon as we find any character from s2.  Note that there
+	 * must be a NUL in s2; it suffices to stop when we find that, too.
+	 */
+	for (p = s1;;) {
+		c = *p++;
+		spanp = s2;
+		do {
+			if ((sc = *spanp++) == c)
+				return (p - 1 - s1);
+		} while (sc != 0);
+	}
+	/* NOTREACHED */
+}
+
+char *strsep(char **stringp, const char *delim) 
+{
+    char *begin, *end;
+    begin = *stringp;
+    if (begin == NULL)
+        return NULL;
+    /* Find the end of the token.  */
+    end = begin + strcspn(begin, delim);
+    if (*end) {
+        /* Terminate the token and set *STRINGP past NUL character.  */
+        *end++ = '\0';
+        *stringp = end;
+    } else
+        /* No more delimiters; this is the last token.  */
+        *stringp = NULL;
+    return begin;
+}
+
+
+char *strdup(const char *restrict s) {
+    size_t len;
+	char *copy;
+
+	len = strlen(s) + 1;
+	if (!(copy = (char *) kcalloc(len, sizeof(char))))
+		return (NULL);
+	memcpy(copy, s, len);
+	return (copy);
 }
 

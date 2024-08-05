@@ -164,6 +164,8 @@ void ata_drive_read_pio(struct ata_drive *drive_ptr, uint8_t sector_n, uint32_t 
 
 void ata_drive_write_pio(struct ata_drive *drive_ptr, uint8_t sector_n, uint32_t lba, uint8_t *buff);
 
+uint8_t ata_drive_get_status (struct ata_drive *drive_ptr);
+
 void ata_drive_print_status(struct ata_drive *drive_ptr);
 
 void ata_drive_print_error(struct ata_drive *drive_ptr);
