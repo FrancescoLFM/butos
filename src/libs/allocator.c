@@ -37,14 +37,14 @@ int memspace_enclosed(struct memspace *big, struct memspace *small)
 
 void allocator_init(
     allocator_t *a,
-    void *heap,
-    size_t heap_size,
+    uintptr_t pool,
+    size_t pool_size,
     void *registry,
     size_t reg_size /* in bytes */
 )
 {
-    a->heap.start = heap;
-    a->heap.size = heap_size;
+    a->pool.start = pool;
+    a->pool.size = pool_size;
     a->registry = registry;
     a->capacity = reg_size / sizeof(struct memspace);
     a->size = 0;
@@ -96,16 +96,16 @@ void allocator_unregister(allocator_t *a, size_t index)
  * 2. arrivi ad un indirizzo per cui: m not encloses insede heap
  * 3. superi la capacity
  */
-void *allocator_alloc(allocator_t *a, size_t size)
+uintptr_t allocator_alloc(allocator_t *a, size_t size)
 {
     struct memspace m;
 
     /* allocatore pieno */
     if (allocator_full(a) || size == 0)
-        return NULL;
+        return 0;
     
     /* skip overlapping blocks */
-    m.start = a->heap.start;
+    m.start = a->pool.start;
     m.size = size;
     for (size_t i = 0; i < a->size && memspace_overlap(&m, &a->registry[i]); i++)
         m.start = a->registry[i].start + a->registry[i].size;
@@ -114,8 +114,8 @@ void *allocator_alloc(allocator_t *a, size_t size)
      * In teoria se tutto è stato fatto bene serve farlo solo
      * se siamo oltre l'ultimo blocco (i == a->size)
      */
-    if (!memspace_enclosed(&a->heap, &m))
-        return NULL;
+    if (!memspace_enclosed(&a->pool, &m))
+        return 0;
     /* puts m in the registy while preserving sorting */
     allocator_register(a, &m);
     
@@ -123,7 +123,7 @@ void *allocator_alloc(allocator_t *a, size_t size)
 }
 
 static
-int allocator_find_in_registry(allocator_t *a, const void *ptr)
+int allocator_find_in_registry(allocator_t *a, const uintptr_t ptr)
 {
     for (size_t i = 0; i < a->size; i++)
         if (a->registry[i].start == ptr)
@@ -138,7 +138,7 @@ int allocator_find_in_registry(allocator_t *a, const void *ptr)
  * Se ci riesci copia il contenuto di ptr nel nuovo spazio allocato. Solo in
  * caso di successo libera ptr. Restituisci il nuovo indirizzo.
  */
-void *allocator_realloc(allocator_t *a, void *ptr, size_t size)
+uintptr_t allocator_realloc(allocator_t *a, uintptr_t ptr, size_t size)
 {
     struct memspace m;
     int index;
@@ -153,7 +153,7 @@ void *allocator_realloc(allocator_t *a, void *ptr, size_t size)
 
     can_enlarge = 
         /* sei alla fine e hai molto spazio dopo */
-        ((size_t)index == a->size-1 && memspace_enclosed(&a->heap, &m)) ||
+        ((size_t)index == a->size-1 && memspace_enclosed(&a->pool, &m)) ||
         /* sei in mezzo ma non ti sovrapponi con il successivo */
         !memspace_overlap(&m, &a->registry[index+1]);
     
@@ -164,10 +164,10 @@ void *allocator_realloc(allocator_t *a, void *ptr, size_t size)
 
     m.start = allocator_alloc(a, size);
     if (!m.start)
-        return NULL;
+        return 0;
     
     // here the MIN handles shrinking and enlargement
-    memcpy(m.start, ptr, MIN(a->registry[index].size, size));
+    memcpy((void *) m.start, (void *) ptr, MIN(a->registry[index].size, size));
     allocator_free(a, ptr);
 
     return m.start;
@@ -179,7 +179,7 @@ static void raise_free_error()
     stop();
 }
 
-void allocator_free(allocator_t *a, void *ptr)
+void allocator_free(allocator_t *a, uintptr_t ptr)
 {
     int index;
 
@@ -199,7 +199,7 @@ void allocator_print(allocator_t *a, int verbose)
             "registry size: %u\n"
             "registry capacity: %u\n"
             "registry:\n",
-            a->heap.start, MEMSPACE_END(&a->heap), a->heap.size,
+            a->pool.start, MEMSPACE_END(&a->pool), a->pool.size,
             a->size, a->capacity);
     
     for (size_t i = 0; i < a->size; i++)

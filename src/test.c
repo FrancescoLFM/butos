@@ -38,55 +38,6 @@ int test_scan()
     return 0;
 }
 
-void test_allocator()
-{
-    allocator_t a;
-    allocator_t *allocator = &a;
-
-    void *heap_start = (void *)0x200000;
-    size_t heap_size = 1000;
-    void *registry_start = (char *)heap_start + heap_size;
-    size_t registry_size = 100 * sizeof(struct memspace);
-
-    allocator_init(
-        allocator,
-        heap_start,
-        heap_size,
-        registry_start,
-        registry_size
-    );
-
-    uint8_t *ptrs[7];
-    for (size_t i = 0; i < 7; i++)
-        ptrs[i] = allocator_alloc(allocator, i);
-    
-    allocator_free(allocator, ptrs[4]);
-    ptrs[3][0] = 1;
-    ptrs[3][1] = 2;
-    ptrs[3][2] = 3;
-    ptrs[3][3] = 4;
-
-    for (int i = 0; i < 4; i++)
-        printk("%u ", (uint32_t)ptrs[3][i]);
-    putc('\n');
-
-    ptrs[3] = allocator_realloc(allocator, ptrs[3], 8);
-
-    /* la presenza di un numero diverso da 4 alla fine dimostra
-     * l'avvenuta copiatura
-     */
-    for (int i = 0; i < 4; i++)
-        printk("%u ", (uint32_t)ptrs[3][i]);
-    putc('\n');
-
-    allocator_print(allocator, 1);
-    puts("- - - - \n");
-
-    for (int i = 0; i < 7; i++)
-        if (i != 0 && i != 4) allocator_free(allocator, ptrs[i]);
-    allocator_print(allocator, 1);
-}
-
 void test_string()
 {
     int buffer[70] = {0};
