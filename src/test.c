@@ -9,6 +9,30 @@
 #include <fs/disk.h>
 #include <fs/fat.h>
 #include <libs/syscalls.h>
+#include <cpu/paging.h>
+
+#define MEMSPACE_SIZE(START, END)   ((END) - (START) + 1)
+
+void test_allocator()
+{
+    struct allocator a;
+    struct memspace regs[10];
+    allocator_init(
+        &a,
+        (uintptr_t) 0,
+        MEMSPACE_SIZE(0, 31),
+        (void *) regs,
+        sizeof(regs),
+        8
+    );
+
+    allocator_alloc(&a, 3);
+    allocator_alloc(&a, 3);
+    allocator_free(&a, 0);
+    allocator_alloc(&a, 9);
+    allocator_print(&a, 1);
+    
+}
 
 int test_scan()
 {

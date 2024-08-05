@@ -13,16 +13,21 @@ struct allocator {
     struct memspace *registry; /* - keep tracks of allocated space */
     size_t size;               /* - number of blocks allocated at each moment */
     size_t capacity;           /* - maximum number of blocks we can allocate */
+    uint32_t alignment;
 };
 
 typedef struct allocator allocator_t;
 
-void allocator_init(
+/*
+ *   Returns error if pool is not aligned to alignment value
+*/
+uint8_t allocator_init(
     allocator_t *a,
     uintptr_t pool,
     size_t pool_size,
     void *registry,
-    size_t reg_size
+    size_t reg_size,
+    uint32_t alignment
 );
 
 int allocator_full(allocator_t *a);

@@ -18,7 +18,8 @@ void kalloc_start(
         (uintptr_t) heap,
         heap_size,
         registry,
-        reg_size
+        reg_size,
+        1
     );
 }
 

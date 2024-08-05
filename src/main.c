@@ -7,18 +7,7 @@
 #include <libs/alloc.h>
 #include <cpu/proc.h>
 
-void fs_test();
-void syscall_test();
-
-/*
-void test_ata();
-void test_string();
 void test_allocator();
-void test_scan();
-void test_ata_io();
-void test_pci();
-void test_ide_controller();
-*/
 
 void main()
 {
@@ -40,9 +29,7 @@ void main()
 
     keyboard_start(100);
 
-    syscall_test();
-    //fs_test();
-    // proot_init(shell_init);
+    test_allocator();
 
     stop();
 }

@@ -18,7 +18,7 @@
 static
 int memspace_overlap(struct memspace *m1, struct memspace *m2)
 {
-    return MAX(m1->start, m2->start) < MIN(MEMSPACE_END(m1), MEMSPACE_END(m2));
+    return MAX(m1->start, m2->start) <= MIN(MEMSPACE_END(m1), MEMSPACE_END(m2));
 }
 
 /**
@@ -35,19 +35,25 @@ int memspace_enclosed(struct memspace *big, struct memspace *small)
         MEMSPACE_END(small) <= MEMSPACE_END(big);
 }
 
-void allocator_init(
+uint8_t allocator_init(
     allocator_t *a,
     uintptr_t pool,
     size_t pool_size,
     void *registry,
-    size_t reg_size /* in bytes */
+    size_t reg_size, //* In bytes
+    uint32_t alignment
 )
 {
+    if (alignment == 0 || pool % alignment)
+        return EXIT_FAILURE;
     a->pool.start = pool;
     a->pool.size = pool_size;
     a->registry = registry;
     a->capacity = reg_size / sizeof(struct memspace);
     a->size = 0;
+    a->alignment = alignment;
+
+    return EXIT_SUCCESS;
 }
 
 int allocator_full(allocator_t *a)
@@ -85,6 +91,14 @@ void allocator_unregister(allocator_t *a, size_t index)
     a->size--;
 }
 
+uintptr_t ceil_to_alignment(uintptr_t start, uint32_t alignment)
+{
+    if (start % alignment == 0)
+        return start;
+    
+    return start + (alignment - start % alignment);
+}
+
 /**
  * Assumiamo il registro ordinato per valori crescenti di void *start
  * Parti dal primo indirizzo dell'heap e vedi se (indirizzo, size) ha 
@@ -107,8 +121,10 @@ uintptr_t allocator_alloc(allocator_t *a, size_t size)
     /* skip overlapping blocks */
     m.start = a->pool.start;
     m.size = size;
-    for (size_t i = 0; i < a->size && memspace_overlap(&m, &a->registry[i]); i++)
-        m.start = a->registry[i].start + a->registry[i].size;
+
+    for (size_t i = 0; i < a->size && memspace_overlap(&m, &a->registry[i]); i++) {
+        m.start = ceil_to_alignment(a->registry[i].start + a->registry[i].size, a->alignment);
+    }
     /**
      * Check if the block we found lives all inside the heap.
      * In teoria se tutto è stato fatto bene serve farlo solo
