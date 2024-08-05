@@ -9,21 +9,26 @@
 #define PART_NUM            4
 #define MBR_ENTRY_SIZE      16
 
-typedef enum DISK_TYPE_T {
+typedef enum {
     ATA_DRIVE
-} DISK_TYPE;
+} disk_type;
+
+typedef enum {
+    DISK_SUCCESS,
+    DISK_ERROR
+} disk_status;
 
 /* Abstract disk interface struct */
 struct disk {
-    DISK_TYPE type;
+    disk_type type;
     uint32_t part_offset;
     void *drive_ptr;
 };
 
-void disk_read(struct disk *disk, uint8_t n, uint32_t lba, uint8_t *buff);
-void disk_write(struct disk *disk, uint8_t n, uint32_t lba, uint8_t *buff);
-struct disk *disk_init(DISK_TYPE type);
-void disk_set_offset(struct disk *disk, uint8_t part_type);
+disk_status disk_read(struct disk *disk, uint8_t n, uint32_t lba, uint8_t *buff);
+disk_status disk_write(struct disk *disk, uint8_t n, uint32_t lba, uint8_t *buff);
+struct disk *disk_init(disk_type type);
+disk_status disk_set_offset(struct disk *disk, uint8_t part_type);
 void disk_fini(struct disk *disk);
 
 #endif
