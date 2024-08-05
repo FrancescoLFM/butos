@@ -7,31 +7,37 @@
 #define HIGH                    1
 #define LOW                     0
 
-#define ATA                     0
-#define ATAPI                   1
+enum ata_device_type {
+    ATA   = 0,
+    ATAPI = 1
+};
 
-// ERRORS
+enum ata_errors_t {
+    ATA_ER_BBK   = 0x80,    //? Bad block
+    ATA_ER_UNC   = 0x40,    //? Uncorrectable data
+    ATA_ER_MC    = 0x20,    //? Media changed
+    ATA_ER_IDNF  = 0x10,    //? ID mark not found
+    ATA_ER_MCR   = 0x08,    //? Media change request
+    ATA_ER_ABRT  = 0x04,    //? Command aborted
+    ATA_ER_TK0NF = 0x02,    //? Track 0 not found
+    ATA_ER_AMNF  = 0x01     //? No address mark
+};
 
-#define ATA_ER_BBK              0x80    // Bad block
-#define ATA_ER_UNC              0x40    // Uncorrectable data
-#define ATA_ER_MC               0x20    // Media changed
-#define ATA_ER_IDNF             0x10    // ID mark not found
-#define ATA_ER_MCR              0x08    // Media change request
-#define ATA_ER_ABRT             0x04    // Command aborted
-#define ATA_ER_TK0NF            0x02    // Track 0 not found
-#define ATA_ER_AMNF             0x01    // No address mark
+enum ata_status_t {
+    ATA_SR_BSY    = 0x80,     //? Busy
+    ATA_SR_DRDY   = 0x40,     //? Drive ready
+    ATA_SR_DF     = 0x20,     //? Drive write fault
+    ATA_SR_DSC    = 0x10,     //? Drive seek complete
+    ATA_SR_DRQ    = 0x08,     //? Data request ready
+    ATA_SR_CORR   = 0x04,     //? Corrected data
+    ATA_SR_IDX    = 0x02,     //? Index
+    ATA_SR_ERR    = 0x01,     //? Error
+    ATA_SUCCESS   = 0x00,
+    ATA_FOUND     = 0x00,
+    ATA_NOT_FOUND = 0x01
+};
 
-// STATUS
-
-#define ATA_SR_BSY              0x80    // Busy
-#define ATA_SR_DRDY             0x40    // Drive ready
-#define ATA_SR_DF               0x20    // Drive write fault
-#define ATA_SR_DSC              0x10    // Drive seek complete
-#define ATA_SR_DRQ              0x08    // Data request ready
-#define ATA_SR_CORR             0x04    // Corrected data
-#define ATA_SR_IDX              0x02    // Index
-#define ATA_SR_ERR              0x01    // Error
-
+typedef enum ata_status_t ata_status;
 // COMMANDS
 
 #define ATA_CMD_READ_PIO        0x20
@@ -82,9 +88,10 @@
 #define ATA_IDENT_MODEL_LEN     40
 #define ATA_IDENT_MAX_LBA(buff) (uint32_t) ((buff[122] << 24) | (buff[123] << 16) | (buff[120] << 8) | buff[121])
 
-// Directions:
-#define ATA_READ                0x00
-#define ATA_WRITE               0x01
+enum access_direction_t {
+    ATA_READ,
+    ATA_WRITE
+};
 
 #define ATA_SECTOR_SIZE         512
 
@@ -97,10 +104,6 @@
                     HAS_LBA, \
                     LBA,     \
                     DRIVE_N)    (LBA_END((LBA)) | ((HAS_LBA) << 6) | ((DRIVE_N) << 4))
-
-
-#define ATA_FOUND               0
-#define ATA_NOT_FOUND           1
 
 // #define DEBUG
 
@@ -132,24 +135,17 @@ void ata_channels_init(struct ata_channel *channel_ptr, uint8_t channel_n, struc
 struct ata_drive *ata_drive_init(uint8_t channel_n, uint8_t drive_n, struct pci_device_info *pci_dev);
 
 uint8_t ata_read(struct ata_drive *drive_ptr, uint8_t reg);
-
 uint16_t ata_read_word(struct ata_drive *drive_ptr, uint8_t reg);
-
 uint8_t ata_read_ctrl(struct ata_drive *drive_ptr, uint8_t reg);
 
 void ata_write(struct ata_drive *drive_ptr, uint8_t reg, uint8_t data);
-
 void ata_write_word(struct ata_drive *drive_ptr, uint8_t reg, uint16_t data);
-
 void ata_write_ctrl(struct ata_drive *drive_ptr, uint8_t reg, uint8_t data);
 
 void ata_select_drive(struct ata_drive *drive_ptr);
-
 void ata_disable_int(struct ata_drive *drive_ptr);
-
-uint8_t ata_drive_read_buffer(struct ata_drive *drive_ptr, uint8_t *buffer, uint32_t buff_len);
-
-uint8_t ata_drive_identify(struct ata_drive *drive_ptr);
+ata_status ata_drive_read_buffer(struct ata_drive *drive_ptr, uint8_t *buffer, uint32_t buff_len);
+ata_status ata_drive_identify(struct ata_drive *drive_ptr);
 
 /*
   ? This function access the drive based on direction (ATA_READ, ATA_WRITE)
@@ -158,21 +154,16 @@ uint8_t ata_drive_identify(struct ata_drive *drive_ptr);
 
   * See the ATA documentation for more informations https://wiki.osdev.org/ATA_PIO_Mode
 */
-void ata_drive_access_pio(struct ata_drive *drive_ptr, uint8_t direction, uint8_t sector_n, uint32_t lba, uint8_t *buff);
+ata_status ata_drive_access_pio(struct ata_drive *drive_ptr, uint8_t direction, uint8_t sector_n, uint32_t lba, uint8_t *buff);
+ata_status ata_drive_read_pio(struct ata_drive *drive_ptr, uint8_t sector_n, uint32_t lba, uint8_t *buff);
+ata_status ata_drive_write_pio(struct ata_drive *drive_ptr, uint8_t sector_n, uint32_t lba, uint8_t *buff);
 
-void ata_drive_read_pio(struct ata_drive *drive_ptr, uint8_t sector_n, uint32_t lba, uint8_t *buff);
-
-void ata_drive_write_pio(struct ata_drive *drive_ptr, uint8_t sector_n, uint32_t lba, uint8_t *buff);
-
-uint8_t ata_drive_get_status (struct ata_drive *drive_ptr);
-
+ata_status ata_drive_get_status (struct ata_drive *drive_ptr);
 void ata_drive_print_status(struct ata_drive *drive_ptr);
-
 void ata_drive_print_error(struct ata_drive *drive_ptr);
 
 void ata_drive_delay(struct ata_drive *drive_ptr);
-
-uint8_t ata_drive_wait(struct ata_drive *drive_ptr);
+ata_status ata_drive_wait(struct ata_drive *drive_ptr);
 
 void ata_drive_fini(struct ata_drive *drive_ptr);
 
