@@ -217,7 +217,11 @@ uint8_t *read_sectors(fat_fs_t *fs, uint32_t lba, uint32_t n)
         return NULL;
     }
     
-    disk_read(volume->drive, n, lba, buffer);
+    if (disk_read(volume->drive, n, lba, buffer)) {
+        puts("Disk error: reading error");
+        kfree(buffer);
+        return NULL;
+    }
 
     return buffer;
 }
@@ -236,7 +240,8 @@ uint8_t write_sectors(fat_fs_t *fs, uint32_t lba, uint8_t *buffer, uint32_t n)
         return EXIT_FAILURE;
     }
 
-    disk_write(volume->drive, n, lba, buffer);
+    if (disk_write(volume->drive, n, lba, buffer))
+        return EXIT_FAILURE;
     return EXIT_SUCCESS;
 }
 
@@ -277,7 +282,8 @@ uint8_t write_cluster(fat_fs_t *fs, uint32_t cluster, uint8_t *buffer)
 
     offset = cluster * fs->volume->cluster_size;
     
-    write_sectors(fs, fs->info.data_region + offset - 2, buffer, fs->volume->cluster_size);
+    if (write_sectors(fs, fs->info.data_region + offset - 2, buffer, fs->volume->cluster_size))
+        return EXIT_FAILURE;
     return EXIT_SUCCESS;
 }
 

@@ -72,8 +72,6 @@ void file_writeb(file_t *file, fat_fs_t *fs, uint32_t offset, uint8_t data)
         file->entry->size = offset;
 
     cluster_chain_len = cluster_chain_get_len(fs, file->cluster);
-    printk("Cluster chain len: %d\n", cluster_chain_len);
-    printk("Entry size: %d\n", file->entry->size);
     if (((file->entry->size - 1) / fs->volume->cluster_sizeb) + 1 > cluster_chain_len) {
         curr_cluster = file->cluster;
         for (uint32_t i=0; i < (file->entry->size / fs->volume->cluster_sizeb); i++) {
