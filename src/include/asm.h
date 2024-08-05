@@ -95,6 +95,14 @@ static force_inline uint32_t get_rip()
     return rip;
 }
 
+static force_inline void jmp(uintptr_t absolute_addr) { 
+    __asm__ __volatile__ (
+        "jmp *%0"
+        :
+        : "r"(absolute_addr)
+    ); 
+}
+
 static force_inline void set_interrupts() { __asm__ __volatile__ ("sti"); }
 
 static force_inline void clear_interrupts() { __asm__ __volatile__ ("cli"); }

@@ -304,7 +304,7 @@ void syscall_test() {
     void *buff = NULL;
     char c = 0;
     kalloc_syscall(&buff, 32);
-    printf_syscall("Buffer: 0x%x\n", (uintptr_t) buff);
+    printf_syscall("Buffer: 0x%x\n", (uintptr_t) &buff);
     kfree_syscall(buff);
     kalloc_print();
     getchar_syscall(&c);

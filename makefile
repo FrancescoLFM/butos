@@ -9,6 +9,9 @@ ISO		= $(ISODIR)/butos.bin
 BINDIR	= bin
 BINFILE	= $(BINDIR)/boot.bin
 
+BOOTDIR = $(ISODIR)/boot/
+BOOTFILE = $(BOOTDIR)/boot.bin
+
 QEMUDIR = qemu
 IMG		= $(QEMUDIR)/vhdd.img
 TARGET	= $(IMG)
@@ -27,7 +30,9 @@ define color_text
 endef
 
 .PHONY=all
-all:	
+all:
+	$(call color_text,91,"[MAKE] Compilazione del bootloader butos")
+	make -C $(BOOTDIR)
 	$(call color_text,91,"[MAKE] Compilazione del kernel butos")
 	make -C $(ISODIR)
 	$(call color_text,91,"[MAKE] Compilazione del bootloader in real mode")
@@ -47,7 +52,8 @@ $(BINFILE): $(ISO) $(INIT)
 	$(call color_text,91,"[MAKE] Generazione dell eseguibile complessivo")
 	-mkdir bin
 	$(DD) seek=0 bs=512 count=2 conv=notrunc if=$(INIT) of=$@
-	$(DD) seek=2 bs=512 conv=notrunc if=$(ISO) of=$@
+	$(DD) seek=2 bs=512 conv=notrunc if=$(BOOTFILE) of=$@
+	$(DD) seek=66 bs=512 conv=notrunc if=$(ISO) of=$@
 
 .PHONY=silent
 silent:
@@ -55,6 +61,8 @@ silent:
 
 .PHONY=clean
 clean:
+	$(call color_text,91,"[MAKE] Pulizia dei file di compilazione nel kernel bootloader")
+	make -C $(BOOTDIR) clean
 	$(call color_text,91,"[MAKE] Pulizia dei file di compilazione nel kernel")
 	make -C $(ISODIR) clean
 	$(call color_text,91,"[MAKE] Pulizia dei file di compilazione nel bootloader")

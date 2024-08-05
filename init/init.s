@@ -16,13 +16,19 @@ init:
 
     ljmp    $0, $_start
 _start:
+    # Reading the kernel bootloader from the disk
+    movb    %dl, (drive_number)
+    mov     $0x0003, %cx
+    mov     $bootloader_size, %al
+    xor     %dh, %dh
+    mov     $bootloader_start, %bx
+    call    read_sector
     # Reading the kernel from the disk
     movb    %dl, (drive_number)
-
-    mov     $0x0003, %cx
+    mov     $kernel_sector, %cx
+    mov     $kernel_head, %dh
     mov     (num_sectors), %al
-    xor     %dh, %dh
-    mov     $0xf000, %bx
+    mov     $kernel_start, %bx
     call    read_sector
 
     cli
@@ -38,8 +44,8 @@ _start:
     .code32
 init_protected:
     movl    $(0x0100 * SEC), %ecx
-    movl    $0xf000, %esi
-    movl    $0x00100000, %edi
+    movl    $kernel_start, %esi
+    movl    $kernel_relocated_mem, %edi
     rep movsl
     # Initializing register for the protected mode
     mov     $0x10, %ax
@@ -53,9 +59,7 @@ init_protected:
     mov     %eax, %ebx
     mov     %eax, %ecx
     mov     %eax, %edx
-    
-    jmp     0x00100000
-
+    jmp     bootloader_start
     .data
 
     .global drive_number
