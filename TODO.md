@@ -25,3 +25,6 @@
 - scrivere una shell - ancora da rendere indipendente
 - scrivere un editor di testo
 - scrivere un assembler
+
+# Configurare la compilazione
+- creare uno script di configurazione

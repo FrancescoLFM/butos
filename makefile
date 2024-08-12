@@ -17,7 +17,7 @@ IMG		= $(QEMUDIR)/vhdd.img
 TARGET	= $(IMG)
 SIZE	= 200K
 FORMAT  = raw
-VMARGS	= -device piix3-ide,id=ide -drive id=disk,file=$(IMG),format=$(FORMAT),if=none -device ide-hd,drive=disk,bus=ide.0 -m 2G -vnc :0
+VMARGS	= -device piix3-ide,id=ide -drive id=disk,file=$(IMG),format=$(FORMAT),if=none -device ide-hd,drive=disk,bus=ide.0 -m 2G
 
 PART	= $(QEMUDIR)/fatpart.img
 
@@ -74,6 +74,10 @@ clean:
 .PHONY=run
 run:
 	qemu-system-x86_64 $(VMARGS)
+
+.PHONY=vnc
+vnc:
+	qemu-system-x86_64 $(VMARGS) -vnc :0
 
 .PHONY=disass
 disass:
