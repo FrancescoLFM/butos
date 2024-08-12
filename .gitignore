@@ -9,3 +9,4 @@ bochs*
 *.dbg
 butos
 src/boot/boot
+programs/bin

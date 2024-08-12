@@ -14,16 +14,19 @@ BOOTFILE = $(BOOTDIR)/boot.bin
 
 QEMUDIR = qemu
 IMG		= $(QEMUDIR)/vhdd.img
+PART	= $(QEMUDIR)/fat_part.img
+MOUNTDIR= $(QEMUDIR)/mount/
 TARGET	= $(IMG)
 SIZE	= 200K
 FORMAT  = raw
 VMARGS	= -device piix3-ide,id=ide -drive id=disk,file=$(IMG),format=$(FORMAT),if=none -device ide-hd,drive=disk,bus=ide.0 -m 2G
 
-PART	= $(QEMUDIR)/fatpart.img
-
 DBG     = gdb
 DBGSYM  = src/butos
 DBGSCR  = scripts/butos.gdb
+
+PROGDIR = programs
+PROGBIN = $(PROGDIR)/bin/*
 
 define color_text
 	@echo -e "\033[$1m$2\033[0m"
@@ -39,7 +42,17 @@ all:
 	make -C $(INITDIR)
 	make $(TARGET)
 	$(call color_text,91,"[MAKE] Creazione della partizione FAT32")
-	mkfs.fat -F 32 --mbr=y --offset=203 -v $(TARGET)
+	rm -f $(PART)
+	mkfs.fat -F 32 --mbr=y -C $(PART) 1000
+	$(call color_text,91,"[MAKE] Compilazione degli eseguibili di base")
+	make -C $(PROGDIR)
+	$(call color_text,91,"[MAKE] Montaggio della partizione")
+	sudo mount -v $(PART) $(MOUNTDIR)
+	for i in $(PROGBIN) ; do \
+		sudo cp $$i $(MOUNTDIR); \
+	done
+	sudo umount -v $(MOUNTDIR)
+	dd if=$(PART) of=$(IMG) seek=203 
 
 $(TARGET): $(BINFILE)
 	$(call color_text,91,"[MAKE] Generazione del disco avviabile")
