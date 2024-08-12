@@ -3,6 +3,44 @@ Butos is a **bare metal program** that aspires to be a **framework** for other p
 
 ![image](https://user-images.githubusercontent.com/71092108/207573430-31ec90b7-d47c-4c58-ac28-358f6acdce79.png)
 
+## Build
+
+### Requirements
+To build butos you must have a linux environment with installed `lib32-glibc`, `qemu-img`, `dosfstools`, `bc` (Reference to arch linux packages)
+
+### Compile
+Compiling butos is pretty easy, run this command on your shell:
+```
+> make
+```
+### Running
+Run butos in a vm environment with `qemu`:
+```
+> make run
+```
+You can also run qemu in vnc mode:
+```
+> make vnc
+```
+
+### Clean directory
+To clean the building directory run:
+```
+> make clean
+```
+### Debug
+To debug butos kernel run:
+```
+> make debug
+```
+`Debug script is located in scripts/butos.gdb`
+### For the nerds
+You can decompile butos kernel running:
+```
+> make disass
+```
+
+
 ## Project structure
 
 ```
