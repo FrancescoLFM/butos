@@ -8,6 +8,7 @@
 #include <cpu/proc.h>
 
 void test_allocator();
+void elf_test();
 
 void main()
 {
@@ -29,7 +30,7 @@ void main()
 
     keyboard_start(100);
 
-    test_allocator();
+    elf_test();
 
     stop();
 }

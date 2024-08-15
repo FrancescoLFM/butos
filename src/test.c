@@ -10,6 +10,7 @@
 #include <fs/fat.h>
 #include <libs/syscalls.h>
 #include <cpu/paging.h>
+#include <fs/elf.h>
 
 #define MEMSPACE_SIZE(START, END)   ((END) - (START) + 1)
 
@@ -284,4 +285,33 @@ void syscall_test() {
     kalloc_print();
     getchar_syscall(&c);
     clear_syscall(BLACK);
+}
+
+void elf_test() {
+    elf_t elf;
+    struct disk *disk;
+    fat_fs_t *fs;
+    file_t *file;
+
+    disk = disk_init(ATA_DRIVE);
+    if (disk == NULL)
+        return;
+    disk_set_offset(disk, FAT_PART_TYPE);
+    
+    fs = fat_fs_init(disk);
+    if (fs == NULL)
+         return;
+
+    file = file_open_path(fs, "/example");
+    if (fs == NULL) {
+        puts("No program named example");
+        return;
+    }
+    if (elf_init(&elf, file, fs))
+        return;
+    
+    puts("Success");
+    file_close(fs, file);
+    fat_fs_fini(fs);
+    disk_fini(disk);
 }
