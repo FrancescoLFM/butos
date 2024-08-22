@@ -138,6 +138,19 @@ uintptr_t allocator_alloc(allocator_t *a, size_t size)
     return m.start;
 }
 
+uintptr_t allocator_aligned_alloc(allocator_t *a, size_t alignment, size_t size)
+{
+    uintptr_t mem;
+    size_t old_alignment;
+
+    old_alignment = a->alignment;
+    a->alignment = alignment;
+    mem = allocator_alloc(a, size);
+    a->alignment = old_alignment;
+
+    return mem;
+}
+
 static
 int allocator_find_in_registry(allocator_t *a, const uintptr_t ptr)
 {

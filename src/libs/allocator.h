@@ -32,6 +32,7 @@ uint8_t allocator_init(
 
 int allocator_full(allocator_t *a);
 uintptr_t allocator_alloc(allocator_t *a, size_t size);
+uintptr_t allocator_aligned_alloc(allocator_t *a, size_t alignment, size_t size);
 uintptr_t allocator_realloc(allocator_t *a, uintptr_t ptr, size_t size);
 void allocator_free(allocator_t *a, uintptr_t ptr);
 void allocator_print(allocator_t *a, int verbose); /* debug */

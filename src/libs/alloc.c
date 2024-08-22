@@ -28,6 +28,11 @@ void *kalloc(size_t size)
     return (void *) allocator_alloc(kallocator, size);
 }
 
+void *aligned_kalloc(size_t alignment, size_t size)
+{
+    return (void *) allocator_aligned_alloc(kallocator, alignment, size);
+}
+
 void kfree(void *ptr)
 {
     allocator_free(kallocator, (uintptr_t) ptr);
