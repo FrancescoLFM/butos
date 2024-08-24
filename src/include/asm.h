@@ -103,10 +103,22 @@ static force_inline void jmp(uintptr_t absolute_addr) {
     ); 
 }
 
+static force_inline void call(uintptr_t absolute_addr) { 
+    __asm__ __volatile__ (
+        "call *%0"
+        :
+        : "r"(absolute_addr)
+    ); 
+}
+
 static force_inline void set_interrupts() { __asm__ __volatile__ ("sti"); }
 
 static force_inline void clear_interrupts() { __asm__ __volatile__ ("cli"); }
 
 static force_inline void iret() { __asm__ __volatile__ ("iret"); }
+
+static force_inline void pusha() { __asm__ __volatile__ ("pusha"); }
+
+static force_inline void popa() { __asm__ __volatile__ ("popa"); }
 
 #endif
