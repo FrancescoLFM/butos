@@ -11,6 +11,7 @@
 #include <libs/syscalls.h>
 #include <cpu/paging.h>
 #include <fs/elf.h>
+#include <cpu/proc.h>
 
 #define MEMSPACE_SIZE(START, END)   ((END) - (START) + 1)
 
@@ -293,6 +294,8 @@ void elf_test() {
     fat_fs_t *fs;
     file_t *file;
 
+    if (process_init())
+        return;
     disk = disk_init(ATA_DRIVE);
     if (disk == NULL)
         return;
@@ -310,7 +313,9 @@ void elf_test() {
     if (elf_init(&elf, file, fs))
         return;
     
-    puts("Success");
+    process_exec(&elf);
+
+    elf_fini(&elf);
     file_close(fs, file);
     fat_fs_fini(fs);
     disk_fini(disk);

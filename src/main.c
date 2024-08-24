@@ -6,12 +6,14 @@
 #include <drivers/keyboard.h>
 #include <libs/alloc.h>
 #include <cpu/proc.h>
+#include <cpu/paging.h>
 
 void test_allocator();
 void elf_test();
 
 void main()
 {
+    page_directory_adjust();
     isr_install();
     vga_open();
     vga_clear(BLACK);
