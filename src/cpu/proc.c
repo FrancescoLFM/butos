@@ -40,9 +40,7 @@ int process_exec(elf_t *elf)
         if (elf->p_headers[i].segment_type == PT_LOAD && elf->p_headers[i].p_offset) {
             paddr = allocator_alloc(&proc_allocator, elf->p_headers[i].p_memsz);
             kernel_page_table_alloc(page_directory_new, &proc_page_table, paddr, elf->p_headers[i].p_vaddr, PAGE_TABLE_SIZE, KERNEL_PAGE_ATTR);
-            printk("page dir address: 0x%x (0x%x)\n", page_directory_new, kernel_virtual_to_physical((uintptr_t) page_directory_new));
             page_directory_load((uint32_t *) kernel_virtual_to_physical((uintptr_t) page_directory_new));
-            printk("0x%x\n", page_directory_new[4]);
             p_header_memload(&elf->p_headers[i], elf);
         }
     }

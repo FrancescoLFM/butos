@@ -73,7 +73,6 @@ elf_status_t p_header_memload(struct elf_p_header *p_header, elf_t *elf)
 
     v_addr = (void *) p_header->p_vaddr;
     pmem_raw = file_read(elf->file, current_filesystem, p_header->p_offset, p_header->p_memsz);
-    print_buffer(pmem_raw, p_header->p_memsz);
     memcpy(v_addr, pmem_raw, p_header->p_memsz);
 
     kfree(pmem_raw);
