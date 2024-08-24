@@ -8,7 +8,7 @@ BINDIR = ../../bin
 FLAGS = -Wall -Wextra -Werror
 FLAGS += -fno-pie -m32
 FLAGS += -g
-FLAGS += -I.
+FLAGS += -I../..
 
 CFLAGS = $(FLAGS)
 CFLAGS += -ffreestanding -nostdlib -fno-stack-protector -std=c99 -mgeneral-regs-only

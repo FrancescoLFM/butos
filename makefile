@@ -83,6 +83,7 @@ clean:
 	$(call color_text,91,"[MAKE] Rimozione del disco generato")
 	rm $(TARGET)
 	rm $(BINFILE)
+	make -C $(PROGDIR) clean
 
 .PHONY=run
 run:
