@@ -42,7 +42,7 @@ uint8_t file_readb(file_t *file, fat_fs_t *fs, uint32_t offset)
         return FAT_EOF;
 
     cluster = cluster_chain_read(fs, file->cluster, offset / fs->volume->cluster_sizeb);
-    return cache_readb(file->cache, fs, cluster, offset);
+    return cache_readb(file->cache, fs, cluster, offset % fs->volume->cluster_sizeb);
 }
 
 uint8_t *file_read(file_t *file, fat_fs_t *fs, uint32_t offset, size_t size)

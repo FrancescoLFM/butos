@@ -13,7 +13,8 @@ typedef enum {
     ELF_SUCCESS,
     ELF_GENERIC_ERROR,
     NOT_ELF,
-    ELF_UNSUPPORTED_ARCH
+    ELF_UNSUPPORTED_ARCH,
+    ELF_MALLOC_ERROR
 } elf_status_t;
 
 enum {
@@ -72,11 +73,6 @@ struct elf_header {
     u16 str_index;
 };
 
-struct elf {
-    file_t *file;
-    struct elf_header header;
-};
-
 typedef enum {
     PT_NULL,
     PT_LOAD,
@@ -84,7 +80,6 @@ typedef enum {
     PT_INTERP,
     PT_NOTE_SEC,
 } pt_t;
-
 struct elf_p_header {
     pt_t segment_type;
     u32 p_offset;
@@ -96,8 +91,16 @@ struct elf_p_header {
     u32 alignment;
 };
 
+struct elf {
+    file_t *file;
+    struct elf_header header;
+    struct elf_p_header *p_headers;
+};
+
 typedef struct elf elf_t;
 
 elf_status_t elf_init(elf_t *elf, file_t *file, fat_fs_t *fs);
+void elf_fini(elf_t *elf);
+elf_status_t p_header_memload(struct elf_p_header *p_header, elf_t *elf);
 
 #endif

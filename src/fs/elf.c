@@ -57,7 +57,7 @@ void print_buffer(uint8_t *buffer, size_t size)
     for (uint32_t i=0; i < size; i++) {
         printk("%x ", buffer[i]);
         
-        if (++words_readed == 21) {
+        if (++words_readed == 30) {
             words_readed = 0;
             putc('\n');
         }
@@ -73,8 +73,8 @@ elf_status_t p_header_memload(struct elf_p_header *p_header, elf_t *elf)
 
     v_addr = (void *) p_header->p_vaddr;
     pmem_raw = file_read(elf->file, current_filesystem, p_header->p_offset, p_header->p_memsz);
-    memcpy(v_addr, pmem_raw, p_header->p_memsz);
     print_buffer(pmem_raw, p_header->p_memsz);
+    memcpy(v_addr, pmem_raw, p_header->p_memsz);
 
     kfree(pmem_raw);
 
@@ -89,20 +89,20 @@ void print_p_header(struct elf_p_header *p_header)
     printk("%s\t0x%x\t0x%x\t0x%x\n", type_str[p_header->segment_type], p_header->p_offset, p_header->p_vaddr, p_header->p_memsz);
 }
 
-elf_status_t elf_load_p_headers(elf_t *elf)
+elf_status_t elf_read_p_headers(elf_t *elf)
 {
     uint8_t *p_header_raw;
-    struct elf_p_header p_header;
+    
+    elf->p_headers = kcalloc(elf->header.p_entry_num, sizeof(*elf->p_headers));
+    if (elf->p_headers == NULL)
+        return ELF_MALLOC_ERROR;
 
     for (u16 i = 0; i < elf->header.p_entry_num; i++) {
         p_header_raw = file_read(elf->file, current_filesystem, 
                                  elf->header.p_header_offset + (elf->header.p_entry_size * i), 
                                  elf->header.p_entry_size);
-        memcpy(&p_header, p_header_raw, elf->header.p_entry_size);
-        print_p_header(&p_header);
-        // Load in memory only loadable segment and skip ELF header segment
-        if (p_header.segment_type == PT_LOAD && p_header.p_offset)
-            p_header_memload(&p_header, elf);
+        memcpy(&elf->p_headers[i], p_header_raw, elf->header.p_entry_size);
+
         kfree(p_header_raw);
     }
 
@@ -112,11 +112,21 @@ elf_status_t elf_load_p_headers(elf_t *elf)
 /* Assumes that file and fs are not NULL */
 elf_status_t elf_init(elf_t *elf, file_t *file, fat_fs_t *fs)
 {
+    elf_status_t errno;
+
     current_filesystem = fs;
     elf->file = file;
-    elf_read_header(elf);
+    if((errno = elf_read_header(elf)))
+        return errno;
     if (elf->header.arch != ELF32_ARCH && elf->header.insset != ELF_X86)
         return ELF_UNSUPPORTED_ARCH;
+    if((errno = elf_read_p_headers(elf)))
+        return errno;
 
-    return ELF_SUCCESS;
+    return errno;
+}
+
+void elf_fini(elf_t *elf)
+{
+    kfree(elf->p_headers);
 }
