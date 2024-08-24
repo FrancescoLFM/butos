@@ -3,6 +3,13 @@
 
 #include <include/def.h>
 
+struct page_table {
+    uint32_t *table;
+    size_t size;
+    uint8_t attr;  
+};
+
+
 #define IDENTITY_PAGE_START     0x0
 #define PAGE_DIR_SIZE           1024
 #define PAGE_TABLE_SIZE         1024
@@ -19,11 +26,15 @@
 #define INDEX_TO_ADDR           0x400000
 
 void page_directory_alloc();
-void kernel_page_table_alloc();
-
+void page_table_alloc(struct page_table *page_table, uint32_t physical_start, uint32_t virtual_start, uint32_t page_size, uint8_t attr);
 extern void page_directory_load(uint32_t *page_directory_addr);
-extern void paging_enable();
 
+uintptr_t kernel_virtual_to_physical(uintptr_t virtual_address);
+void kernel_page_table_alloc(uint32_t *page_dir, struct page_table *page_table, uint32_t physical_start, uint32_t virtual_start, uint32_t page_size, uint8_t attr);
+extern void paging_enable();
+uint32_t *get_blank_page_directory();
+
+void page_directory_adjust();
 void paging_init();
 
 #endif
