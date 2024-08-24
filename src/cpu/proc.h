@@ -1,10 +1,18 @@
-typedef unsigned long pid_t;
+#ifndef PROC_H
+#define PROC_H
 
+#include <fs/elf.h>
+
+#define DEFAULT_STACK   1024
+#define DEFAULT_HEAP    1000000
 struct process {
-    pid_t id;
-    int (*subroutine)();
-    struct process *parent;
-    struct process *child;
+    uintptr_t vaddr;
+    elf_t *executable;
+    u32 stack_size;
+    u32 heap_size;
 };
 
-int proot_init(int (*root_subroutine)());
+int process_init();
+int process_exec(elf_t *elf);
+
+#endif
