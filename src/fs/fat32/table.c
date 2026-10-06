@@ -4,6 +4,16 @@
 
 #define FAT_CACHE_SIZE      10
 
+/* The cache only addresses the first FAT, keep the other copies in sync */
+static uint8_t fat_table_write_sector(fat_fs_t *fs, uint32_t lba, uint8_t *buffer)
+{
+    for (uint32_t i=0; i < fs->table->count; i++)
+        if (write_sector(fs, lba + i * fs->table->size, buffer))
+            return EXIT_FAILURE;
+
+    return EXIT_SUCCESS;
+}
+
 fat_table_t *fat_table_init(fat_volume_t *volume)
 {
     fat_table_t *table;
@@ -14,7 +24,7 @@ fat_table_t *fat_table_init(fat_volume_t *volume)
         return NULL;
     }
 
-    table->cache = cache_init(FAT_CACHE_SIZE, volume->sector_size, read_sector, write_sector);
+    table->cache = cache_init(FAT_CACHE_SIZE, volume->sector_size, read_sector, fat_table_write_sector);
     if (table->cache == NULL) {
         kfree(table);
         return NULL;
@@ -101,6 +111,7 @@ uint32_t cluster_chain_get_len(fat_fs_t *fs, uint32_t start)
 
     do {
         curr = fat_table_read(fs, start);
+        start = curr;
         len++;
     } while (curr != EOC1 && curr != EOC2 && curr != READ_ERROR);
 

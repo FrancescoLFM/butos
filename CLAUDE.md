@@ -45,6 +45,7 @@ Changing stage-2 size or these sector offsets requires updating both the `makefi
 
 - `int 0x80`, syscall number in EAX, args in EBX/ECX. Dispatch: `isr.s` → `syscall_handler` in `cpu/idt.c` → `syscall_handlers[]` table in `src/libs/syscalls.h`.
 - User-side wrappers are duplicated in `programs/include/syscalls.h` (and also in `src/libs/syscalls.h` for kernel-side testing). Adding a syscall means: handler in `src/libs/syscalls.c`, entry + bump `SYSCALLS_NUM` in `src/libs/syscalls.h`, and the wrapper in both headers.
+- File syscalls (9–15: `open/close/read/write/seek/create/remove`) go through the global open-file table in `src/fs/fd.c` (on the root FAT32 fs) and return negative `FILE_*` errors. Writes reach the disk on `close` (`file_sync`: data, dir entry size, FAT, FSInfo); descriptors a process leaves open are closed when it exits (`process_depth()`). Only 8.3 names, no seeking past EOF. `programs/sources/filetest/` exercises them.
 - The shell is `programs/sources/butosh/` (with a tiny libc subset in `ulib.c`): builtins plus `exec` of `/<name>` from the FAT32 root.
 - Programs live in `programs/sources/<name>/` with their own makefile and linker script (example links at 0x01000000, entry `main`), output to `programs/bin/`, and are copied onto the FAT32 partition by `make`. The kernel loads them by path (e.g. `/example`).
 

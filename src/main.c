@@ -10,6 +10,7 @@
 #include <libs/string.h>
 #include <fs/disk.h>
 #include <fs/fat.h>
+#include <fs/fd.h>
 
 void test_allocator();
 void elf_test();
@@ -42,6 +43,7 @@ static void init_start()
         disk_fini(disk);
         return;
     }
+    fd_init(fs);
     if (process_init(fs)) {
         puts("Failed to initialize processes\n");
         fat_fs_fini(fs);

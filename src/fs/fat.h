@@ -115,6 +115,7 @@ struct fat_fs
 struct cache_line 
 {
     int valid;
+    int dirty;
     int tag;
     uint8_t *data;
 };
@@ -171,6 +172,7 @@ uint32_t cache_readl(cache_t *cache, fat_fs_t *fs, uint32_t sector, uint32_t off
 void cache_writeb(cache_t *cache, fat_fs_t *fs, uint32_t sector, uint32_t offset, uint8_t data);
 void cache_writel(cache_t *cache, fat_fs_t *fs, uint32_t sector, uint32_t offset, uint32_t data);
 void cache_flush(cache_t *cache, fat_fs_t *fs);
+void cache_invalidate(cache_t *cache, fat_fs_t *fs);
 void cache_lines_destroy(cache_line_t *cache_lines, size_t line_count);
 void cache_fini(cache_t *cache);
 
@@ -187,6 +189,8 @@ fat_fs_t *fat_fs_init(struct disk *partition);
 uint8_t fat_fs_getinfo(fat_fs_t *fs);
 void fat_fs_fini(fat_fs_t *fs);
 void fat_fs_printinfo(fat_fs_t *fs);
+void fat_fsinfo_flush(fat_fs_t *fs);
+void fat_fs_sync(fat_fs_t *fs);
 
 // src/table.c
 fat_table_t *fat_table_init(fat_volume_t *volume);
@@ -205,10 +209,11 @@ file_t *file_open(fat_fs_t *fs, entry_t *entry);
 void file_close(fat_fs_t *fs, file_t *file);
 uint8_t file_readb(file_t *file, fat_fs_t *fs, uint32_t offset);
 uint8_t *file_read(file_t *file, fat_fs_t *fs, uint32_t offset, size_t size);
-void file_writeb(file_t *file, fat_fs_t *fs, uint32_t offset, uint8_t data);
-void file_write(file_t *file, fat_fs_t *fs, uint32_t offset, uint8_t *data, size_t size);
+uint8_t file_writeb(file_t *file, fat_fs_t *fs, uint32_t offset, uint8_t data);
+size_t file_write(file_t *file, fat_fs_t *fs, uint32_t offset, uint8_t *data, size_t size);
+uint8_t file_sync(fat_fs_t *fs, file_t *file);
 uint8_t file_create(fat_fs_t *fs, char *path, char *filename);
-void file_delete(fat_fs_t *fs, char *path);
+uint8_t file_delete(fat_fs_t *fs, char *path);
 file_t *file_open_path(fat_fs_t *fs, char *path);
 entry_t *file_entry_create(char *filename, uint32_t cluster);
 
@@ -217,7 +222,7 @@ dir_t *dir_init(fat_fs_t *fs, entry_t *entry);
 void dir_scan(fat_fs_t *fs, dir_t *dir);
 entry_t *dir_search(dir_t *dir, char *name);
 entry_t *dir_search_path(fat_fs_t *fs, dir_t *dir, char *path);
-void dir_entry_create(fat_fs_t *fs, dir_t *dir, entry_t *entry);
+uint8_t dir_entry_create(fat_fs_t *fs, dir_t *dir, entry_t *entry);
 void dir_entry_override(fat_fs_t *fs, dir_t *dir, char *short_name, entry_t *entry);
 dir_t *dir_open_path(fat_fs_t *fs, char *path);
 void dir_close(fat_fs_t *fs, dir_t *dir);

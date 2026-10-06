@@ -38,7 +38,7 @@ uint8_t file_readb(file_t *file, fat_fs_t *fs, uint32_t offset)
 {
     uint32_t cluster;
 
-    if (offset > file->entry->size)
+    if (offset >= file->entry->size)
         return FAT_EOF;
 
     cluster = cluster_chain_read(fs, file->cluster, offset / fs->volume->cluster_sizeb);
@@ -61,34 +61,66 @@ uint8_t *file_read(file_t *file, fat_fs_t *fs, uint32_t offset, size_t size)
     return buffer;
 }
 
-void file_writeb(file_t *file, fat_fs_t *fs, uint32_t offset, uint8_t data)
+uint8_t file_writeb(file_t *file, fat_fs_t *fs, uint32_t offset, uint8_t data)
 {
     uint32_t cluster;
     uint32_t cluster_chain_len;
+    uint32_t needed_clusters;
     uint32_t new_cluster;
-    uint32_t curr_cluster;
+    uint32_t last_cluster;
 
-    if (offset > file->entry->size)
-        file->entry->size = offset;
-
+    /* Grow the cluster chain from its tail until it covers offset */
+    needed_clusters = offset / fs->volume->cluster_sizeb + 1;
     cluster_chain_len = cluster_chain_get_len(fs, file->cluster);
-    if (((file->entry->size - 1) / fs->volume->cluster_sizeb) + 1 > cluster_chain_len) {
-        curr_cluster = file->cluster;
-        for (uint32_t i=0; i < (file->entry->size / fs->volume->cluster_sizeb); i++) {
+    if (needed_clusters > cluster_chain_len) {
+        last_cluster = cluster_chain_read(fs, file->cluster, cluster_chain_len - 1);
+        for (; cluster_chain_len < needed_clusters; cluster_chain_len++) {
             new_cluster = fat_table_alloc_cluster(fs, EOC1);
-            fat_table_write(fs, curr_cluster, new_cluster);
-            curr_cluster = new_cluster;
+            if (new_cluster == CLUSTER_ALLOC_ERR)
+                return EXIT_FAILURE;
+            fat_table_write(fs, last_cluster, new_cluster);
+            last_cluster = new_cluster;
         }
     }
 
+    if (offset >= file->entry->size)
+        file->entry->size = offset + 1;
+
     cluster = cluster_chain_read(fs, file->cluster, offset / fs->volume->cluster_sizeb);
-    return cache_writeb(file->cache, fs, cluster, offset, data);
+    cache_writeb(file->cache, fs, cluster, offset % fs->volume->cluster_sizeb, data);
+
+    return EXIT_SUCCESS;
 }
 
-void file_write(file_t *file, fat_fs_t *fs, uint32_t offset, uint8_t *data, size_t size)
+/* Returns the number of bytes written, less than size if the disk is full */
+size_t file_write(file_t *file, fat_fs_t *fs, uint32_t offset, uint8_t *data, size_t size)
 {
-    for (size_t i=0; i < size; i++)
-        file_writeb(file, fs, offset + i, data[i]);
+    size_t i;
+
+    for (i=0; i < size; i++)
+        if (file_writeb(file, fs, offset + i, data[i]))
+            break;
+
+    return i;
+}
+
+/* Writes the file data, its directory entry (size) and the FAT back to the disk */
+uint8_t file_sync(fat_fs_t *fs, file_t *file)
+{
+    dir_t *dir;
+
+    cache_flush(file->cache, fs);
+    if (file->path == NULL)
+        return EXIT_FAILURE;
+
+    dir = dir_open_path(fs, file->path);
+    if (dir == NULL)
+        return EXIT_FAILURE;
+    dir_entry_override(fs, dir, file->entry->short_name, file->entry);
+    dir_close(fs, dir);
+    fat_fs_sync(fs);
+
+    return EXIT_SUCCESS;
 }
 
 file_t *file_open_path(fat_fs_t *fs, char *path)
@@ -116,11 +148,13 @@ file_t *file_open_path(fat_fs_t *fs, char *path)
     }
 
     ret = file_open(fs, entry);
+    kfree(entry);
+    if (ret == NULL)
+        return NULL;
     ret->path = strdup(save_path);
     if (ret->path != NULL)
         rstrip_path(ret->path);
 
-    kfree(entry);
     return ret;
 }
 
@@ -182,6 +216,10 @@ void rstrip_path(char *path)
             return;
         }
 
+    /* File in the root directory */
+    if (path[0] == '/')
+        path[1] = '\0';
+
     return;
 }
 
@@ -190,8 +228,7 @@ uint8_t file_create(fat_fs_t *fs, char *path, char *filename)
     uint32_t cluster;
     dir_t *dir;
     entry_t *file_entry;
-
-    cluster = first_free_cluster_read(fs);
+    uint8_t status;
 
     dir = dir_open_path(fs, path);
     if (dir == NULL)
@@ -202,54 +239,77 @@ uint8_t file_create(fat_fs_t *fs, char *path, char *filename)
         dir_close(fs, dir);
         return EXIT_FAILURE;
     }
+    cluster = fat_table_alloc_cluster(fs, EOC1);
+    if (cluster == CLUSTER_ALLOC_ERR) {
+        dir_close(fs, dir);
+        return EXIT_FAILURE;
+    }
     file_entry = file_entry_create(filename, cluster);
     if (file_entry == NULL) {
+        fat_table_write(fs, cluster, 0);
+        fs->info.free_cluster_count++;
         dir_close(fs, dir);
         return EXIT_FAILURE;
     }
     
-    fat_table_alloc_cluster(fs, EOC1);
-    dir_entry_create(fs, dir, file_entry);
+    status = dir_entry_create(fs, dir, file_entry);
+    if (status) {
+        fat_table_write(fs, cluster, 0);
+        fs->info.free_cluster_count++;
+    }
 
     dir_close(fs, dir);
     kfree(file_entry);
+    fat_fs_sync(fs);
 
-    return EXIT_SUCCESS;
+    return status;
 }
 
-void file_delete(fat_fs_t *fs, char *path)
+uint8_t file_delete(fat_fs_t *fs, char *path)
 {
     dir_t *dir;
     file_t *file;
     entry_t *dummy_entry;
+    uint32_t cluster, next;
 
     file = file_open_path(fs, path);
     if (file == NULL)
-        return;
+        return EXIT_FAILURE;
     if (file->path == NULL) {
         file_close(fs, file);
-        return;
+        return EXIT_FAILURE;
     }
     dir = dir_open_path(fs, file->path);
     if (dir == NULL) {
         file_close(fs, file);
-        return;
+        return EXIT_FAILURE;
     }
     dummy_entry = kcalloc(1, sizeof(*dummy_entry));
     if (dummy_entry == NULL) {
         dir_close(fs, dir);
         file_close(fs, file);
-        return;
+        return EXIT_FAILURE;
     }
+    /* Deleted entries are marked by their first byte */
+    dummy_entry->short_name[0] = INVALID_ENTRY;
     dir_scan(fs, dir);
     dir_entry_override(fs, dir, file->entry->short_name, dummy_entry);
-    fat_table_write(fs, file->cluster, 0);
+
+    /* Free the whole cluster chain */
+    for (cluster = file->cluster; cluster >= 2 && cluster < EOC1; cluster = next) {
+        next = fat_table_read(fs, cluster);
+        fat_table_write(fs, cluster, 0);
+        fs->info.free_cluster_count++;
+        if (cluster < fs->info.free_cluster)
+            fs->info.free_cluster = cluster;
+    }
 
     file_close(fs, file);
     dir_close(fs, dir);
     kfree(dummy_entry);
+    fat_fs_sync(fs);
     
-    return;
+    return EXIT_SUCCESS;
 }
 
 void file_close(fat_fs_t *fs, file_t *file) 

@@ -7,6 +7,7 @@
 #include <libs/alloc.h>
 #include <cpu/idt.h>
 #include <cpu/proc.h>
+#include <fs/fd.h>
 #include <include/asm.h>
 #include <stdarg.h>
 
@@ -70,4 +71,39 @@ void exec_handler(struct registers_t *regs)
 void puts_color_handler(struct registers_t *regs)
 {
     puts_c((uint8_t) regs->ebx, (char *) regs->ecx);
+}
+
+void open_handler(struct registers_t *regs)
+{
+    regs->eax = (uint32_t) fd_open((char *) regs->ebx);
+}
+
+void close_handler(struct registers_t *regs)
+{
+    regs->eax = (uint32_t) fd_close((int) regs->ebx);
+}
+
+void read_handler(struct registers_t *regs)
+{
+    regs->eax = (uint32_t) fd_read((int) regs->ebx, (void *) regs->ecx, (size_t) regs->edx);
+}
+
+void write_handler(struct registers_t *regs)
+{
+    regs->eax = (uint32_t) fd_write((int) regs->ebx, (void *) regs->ecx, (size_t) regs->edx);
+}
+
+void seek_handler(struct registers_t *regs)
+{
+    regs->eax = (uint32_t) fd_seek((int) regs->ebx, (int) regs->ecx, (int) regs->edx);
+}
+
+void create_handler(struct registers_t *regs)
+{
+    regs->eax = (uint32_t) fd_create((char *) regs->ebx);
+}
+
+void remove_handler(struct registers_t *regs)
+{
+    regs->eax = (uint32_t) fd_remove((char *) regs->ebx);
 }

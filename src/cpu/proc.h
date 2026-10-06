@@ -23,5 +23,7 @@ int process_init(fat_fs_t *root_fs);
 int process_exec(elf_t *elf, int *exit_code);
 /* Loads the executable at path from the root filesystem and runs it to completion */
 proc_status_t process_spawn(char *path, int *exit_code);
+/* Nesting depth of the running process, 0 when called from the kernel */
+int process_depth(void);
 
 #endif

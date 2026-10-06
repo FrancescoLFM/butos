@@ -67,7 +67,7 @@ dir_t *dir_init(fat_fs_t *fs, entry_t *entry)
     return dir;
 }
 
-void dir_entry_create(fat_fs_t *fs, dir_t *dir, entry_t *entry)
+uint8_t dir_entry_create(fat_fs_t *fs, dir_t *dir, entry_t *entry)
 {
     size_t offset = 0;
     uint8_t entry_tag;
@@ -75,11 +75,15 @@ void dir_entry_create(fat_fs_t *fs, dir_t *dir, entry_t *entry)
     while (offset < dir->ident->entry->size) {
         entry_tag = file_readb(dir->ident, fs, offset);
         if (entry_tag == 0 || entry_tag == (uint8_t) INVALID_ENTRY) {
-            file_write(dir->ident, fs, offset, (uint8_t *) entry, sizeof(*entry));
-            return;
+            if (file_write(dir->ident, fs, offset, (uint8_t *) entry, sizeof(*entry)) != sizeof(*entry))
+                return EXIT_FAILURE;
+            return EXIT_SUCCESS;
         }   
         offset += sizeof(entry_t);
     }
+
+    /* Directory full */
+    return EXIT_FAILURE;
 }
 
 void dir_entry_override(fat_fs_t *fs, dir_t *dir, char *short_name, entry_t *entry)
@@ -128,14 +132,16 @@ entry_t *dir_read_entry(fat_fs_t *fs, dir_t *dir, size_t offset)
 void dir_scan(fat_fs_t *fs, dir_t *dir)
 {
     size_t offset = 0;
+    size_t i = 0;
     uint8_t entry_attr;
     entry_t *temp_entry;
 
-    for (size_t i=0; offset < dir->ident->entry->size;) {
+    /* The directory may have been changed through another dir_t, drop the stale clusters */
+    cache_invalidate(dir->ident->cache, fs);
+
+    for (; offset < dir->ident->entry->size && i < dir->num_entries;) {
         entry_attr = file_readb(dir->ident, fs, offset + ATTR_OFFSET);
-        if (entry_attr == LFN_ATTR)
-            offset += sizeof(entry_t);
-        if (entry_attr != 0) {
+        if (entry_attr != 0 && entry_attr != LFN_ATTR) {
             temp_entry = dir_read_entry(fs, dir, offset);
             if (temp_entry->short_name[0] != INVALID_ENTRY && temp_entry->short_name[0] != '\0') {
                 if (dir->entries[i] != NULL)
@@ -146,6 +152,13 @@ void dir_scan(fat_fs_t *fs, dir_t *dir)
                 kfree(temp_entry);
         }
         offset += sizeof(entry_t);
+    }
+
+    /* Entries left over from a previous scan (e.g. deleted files) */
+    for (; i < dir->num_entries; i++) {
+        if (dir->entries[i] != NULL)
+            kfree(dir->entries[i]);
+        dir->entries[i] = NULL;
     }
 }
 
@@ -267,16 +280,16 @@ dir_t *dir_open_path(fat_fs_t *fs, char *path)
 
     dir_scan(fs, starting_dir);
     entry_dir = dir_search_path(fs, starting_dir, path);
-    if (entry_dir->attr != DIR_ATTR) {
-        // kfree(entry_dir);
+    if (entry_dir == NULL)
         return NULL;
-    }
-
-    dir = dir_init(fs, entry_dir);
-    if (dir == NULL) {
+    if (entry_dir->attr != DIR_ATTR) {
         kfree(entry_dir);
         return NULL;
     }
+
+    /* dir_init copies the entry */
+    dir = dir_init(fs, entry_dir);
+    kfree(entry_dir);
 
     return dir;
 }

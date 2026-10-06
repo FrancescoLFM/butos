@@ -37,6 +37,7 @@ cache_line_t *cache_lines_create(size_t line_count)
 
     for (size_t i=0; i < line_count; i++) {
         cache_lines[i].valid = 0;
+        cache_lines[i].dirty = 0;
         cache_lines[i].tag = -1;
         cache_lines[i].data = NULL;
     }
@@ -53,8 +54,14 @@ uint8_t cache_access(cache_t *cache, fat_fs_t *fs, uint32_t sector, uint32_t off
     index = tag % cache->cache_size;
 
     if (cache->lines[index].tag != tag) {
-        if (cache->lines[index].valid != 0)
+        if (cache->lines[index].valid != 0) {
+            /* Write back before evicting, or the changes are lost */
+            if (cache->lines[index].dirty &&
+                cache->write(fs, cache->lines[index].tag, cache->lines[index].data))
+                printk("Failed to write back cache line: %d\n", index);
             kfree(cache->lines[index].data);
+        }
+        cache->lines[index].dirty = 0;
         
         cache->lines[index].data = cache->read(fs, tag);
         if (cache->lines[index].data != NULL) {
@@ -70,8 +77,10 @@ uint8_t cache_access(cache_t *cache, fat_fs_t *fs, uint32_t sector, uint32_t off
 
     if (mode == CACHE_READ)
         return cache->lines[index].data[offset % cache->block_size];
-    else if (mode == CACHE_WRITE)
+    else if (mode == CACHE_WRITE) {
         cache->lines[index].data[offset % cache->block_size] = data;
+        cache->lines[index].dirty = 1;
+    }
 
     return 0;
 }
@@ -105,10 +114,26 @@ void cache_writel(cache_t *cache, fat_fs_t *fs, uint32_t sector, uint32_t offset
 void cache_flush(cache_t *cache, fat_fs_t *fs)
 {
     for (size_t i=0; i < cache->cache_size; i++)
-        if (cache->lines[i].valid && cache->lines[i].tag != -1) {
+        if (cache->lines[i].valid && cache->lines[i].dirty && cache->lines[i].tag != -1) {
             if (cache->write(fs, cache->lines[i].tag, cache->lines[i].data))
                 printk("Failed to flush cache line: %d\n", i);
+            else
+                cache->lines[i].dirty = 0;
         }
+}
+
+/* Writes back and drops every line, the next accesses read from the disk again */
+void cache_invalidate(cache_t *cache, fat_fs_t *fs)
+{
+    cache_flush(cache, fs);
+    for (size_t i=0; i < cache->cache_size; i++) {
+        if (cache->lines[i].data != NULL)
+            kfree(cache->lines[i].data);
+        cache->lines[i].data = NULL;
+        cache->lines[i].valid = 0;
+        cache->lines[i].dirty = 0;
+        cache->lines[i].tag = -1;
+    }
 }
 
 void cache_lines_destroy(cache_line_t *cache_lines, size_t line_count)

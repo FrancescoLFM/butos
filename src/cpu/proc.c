@@ -7,6 +7,7 @@
 #include <cpu/paging.h>
 #include <cpu/vmm.h>
 #include <libs/string.h>
+#include <fs/fd.h>
 
 /* Physical memory reserved to process images */
 #define PROC_PMEM_START     0x01000000
@@ -20,6 +21,8 @@ static struct allocator proc_allocator;
 static int proc_initialized = 0;
 /* Filesystem programs are loaded from by process_spawn */
 static fat_fs_t *proc_root_fs;
+/* Number of processes currently running, nested through exec */
+static int proc_depth = 0;
 
 static force_inline uintptr_t get_cr3()
 {
@@ -131,7 +134,11 @@ int process_exec(elf_t *elf, int *exit_code)
             if (p_header_memload(&elf->p_headers[i], elf))
                 goto restore_dir;
     }
+    proc_depth++;
     *exit_code = process_call(entry);
+    /* Files the process left open */
+    fd_close_owned(proc_depth);
+    proc_depth--;
     status = EXIT_SUCCESS;
 
 restore_dir:
@@ -143,6 +150,11 @@ free_image:
     allocator_free(&proc_allocator, paddr);
 
     return status;
+}
+
+int process_depth(void)
+{
+    return proc_depth;
 }
 
 proc_status_t process_spawn(char *path, int *exit_code)

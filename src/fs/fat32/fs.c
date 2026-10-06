@@ -110,6 +110,13 @@ void fat_fsinfo_flush(fat_fs_t *fs)
     write_sector(fs, fs->info.sector, fs->info.buffer);
 }
 
+/* Writes the FAT and the FSInfo sector back to the disk */
+void fat_fs_sync(fat_fs_t *fs)
+{
+    cache_flush(fs->table->cache, fs);
+    fat_fsinfo_flush(fs);
+}
+
 entry_t *fake_entry_create(uint32_t cluster, char *name, size_t size)
 {
     entry_t *fake_entry;
