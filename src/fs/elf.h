@@ -38,6 +38,10 @@ enum {
     ELF_BIG_ENDIAN=2
 };
 
+enum {
+    ELF_TYPE_EXEC=2
+};
+
 typedef enum {
     ELF_MAGIC_NUMBER_OFF=0,
     ELF_ARCH_OFF=4,

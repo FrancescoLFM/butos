@@ -7,12 +7,17 @@
 #include <libs/alloc.h>
 #include <cpu/proc.h>
 #include <cpu/paging.h>
+#include <libs/string.h>
 
 void test_allocator();
 void elf_test();
 
+extern char __bss_start[], __bss_end[];
+
 void main()
 {
+    /* The bootloader doesn't clear .bss, zero-initialized globals rely on this */
+    memset(__bss_start, 0, __bss_end - __bss_start);
     page_directory_adjust();
     isr_install();
     vga_open();

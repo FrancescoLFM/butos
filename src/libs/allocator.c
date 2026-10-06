@@ -119,11 +119,15 @@ uintptr_t allocator_alloc(allocator_t *a, size_t size)
         return 0;
     
     /* skip overlapping blocks */
-    m.start = a->pool.start;
+    m.start = ceil_to_alignment(a->pool.start, a->alignment);
     m.size = size;
 
-    for (size_t i = 0; i < a->size && memspace_overlap(&m, &a->registry[i]); i++) {
-        m.start = ceil_to_alignment(a->registry[i].start + a->registry[i].size, a->alignment);
+    /* Blocks entirely before m don't stop the scan: a later one may still overlap */
+    for (size_t i = 0; i < a->size; i++) {
+        if (a->registry[i].start > MEMSPACE_END(&m))
+            break;
+        if (memspace_overlap(&m, &a->registry[i]))
+            m.start = ceil_to_alignment(a->registry[i].start + a->registry[i].size, a->alignment);
     }
     /**
      * Check if the block we found lives all inside the heap.

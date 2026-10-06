@@ -13,5 +13,10 @@ SECTIONS
     . = 0xC0000000;
     .text : { *(.text) } > RAM
     .data : { *(.data) } > RAM
-    .bss : { *(.bss) } > RAM
+    .bss : {
+        __bss_start = .;
+        *(.bss)
+        *(COMMON)
+        __bss_end = .;
+    } > RAM
 }

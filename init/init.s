@@ -43,17 +43,20 @@ _start:
     
     .code32
 init_protected:
-    movl    $(0x0100 * SEC), %ecx
-    movl    $kernel_start, %esi
-    movl    $kernel_relocated_mem, %edi
-    rep movsl
     # Initializing register for the protected mode
+    # (before the copy: the real mode segments have a 64K limit)
     mov     $0x10, %ax
     mov     %ax, %ds
     mov     %ax, %es
     mov     %ax, %fs
     mov     %ax, %gs
     mov     %ax, %ss
+
+    # Copying SEC sectors (512 bytes = 0x80 longs each) of kernel
+    movl    $(0x80 * SEC), %ecx
+    movl    $kernel_start, %esi
+    movl    $kernel_relocated_mem, %edi
+    rep movsl
 
     xor     %eax, %eax
     mov     %eax, %ebx

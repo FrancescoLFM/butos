@@ -13,6 +13,6 @@ struct process {
 };
 
 int process_init();
-int process_exec(elf_t *elf);
+int process_exec(elf_t *elf, int *exit_code);
 
 #endif

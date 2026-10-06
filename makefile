@@ -52,7 +52,12 @@ $(TARGET): $(BINFILE)
 	dd if=$^ of=$@ conv=notrunc
 
 
+# The kernel lives between sector 66 and the FAT partition at sector 203
+KERNEL_MAX_SIZE = $(shell echo $$(( (203 - 66) * 512 )))
+
 $(BINFILE): $(ISO) $(INIT)
+	@test $$(wc -c < $(ISO)) -le $(KERNEL_MAX_SIZE) || \
+		{ echo "Kernel too big: $$(wc -c < $(ISO)) > $(KERNEL_MAX_SIZE) bytes"; exit 1; }
 	$(call color_text,91,"[MAKE] Generazione dell eseguibile complessivo")
 	-mkdir bin
 	dd seek=0 bs=512 count=2 conv=notrunc if=$(INIT) of=$@

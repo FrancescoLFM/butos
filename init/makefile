@@ -20,6 +20,9 @@ all: $(BINARY)
 %.o: %.s
 	$(AS) $(ASFLAGS) $< -o $@
 
+# SEC (kernel size in sectors) is baked into init.o
+init.o: ../src/butos.bin
+
 $(EXECUTABLE): $(OBJECTS)
 	$(call color_text,33,"[INIT] Linking del bootloader")
 	$(LD) -T $(LDSCR) $^ -o $@

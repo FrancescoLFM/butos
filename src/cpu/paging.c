@@ -14,7 +14,7 @@ static struct page_table identity_page_table = {
 
 void page_directory_alloc() {
     for (size_t i = 0; i < PAGE_DIR_SIZE; i++) {
-        _page_directory[i] = KERNEL_PAGE_ATTR;
+        _page_directory[i] = 0; /* not present: unmapped accesses must page fault */
     }
     page_directory = _page_directory;
 }
@@ -25,6 +25,9 @@ void page_table_init(struct page_table *page_table, uint32_t physical_start, uin
     page_table->attr = attr;
     for (uint32_t i = 0; i < page_size; i++) {
         page_table->table[i] = ((PAGE_FRAME_SIZE * i) + physical_start) | attr;
+    }
+    for (uint32_t i = page_size; i < PAGE_TABLE_SIZE; i++) {
+        page_table->table[i] = 0;
     }
 }
 

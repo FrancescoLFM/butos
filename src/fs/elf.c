@@ -40,9 +40,13 @@ elf_status_t elf_read_header(elf_t *elf)
     uint8_t *elf_header_raw;
 
     elf_header_raw = file_read(elf->file, current_filesystem, 0, ELF32_HEADER_SIZE);
-    if (elf_header_raw[ELF_MAGIC_NUMBER_OFF] != ELF_MAGIC_NUMBER && 
-        strncmp((char *)elf_header_raw + 1, ELF_STRING, ELF_STRING_SIZE))
+    if (elf_header_raw == NULL)
+        return ELF_MALLOC_ERROR;
+    if (elf_header_raw[ELF_MAGIC_NUMBER_OFF] != ELF_MAGIC_NUMBER || 
+        strncmp((char *)elf_header_raw + 1, ELF_STRING, ELF_STRING_SIZE)) {
+        kfree(elf_header_raw);
         return NOT_ELF;
+    }
 
     memcpy(&elf->header, elf_header_raw, ELF32_HEADER_SIZE);
 
@@ -71,9 +75,16 @@ elf_status_t p_header_memload(struct elf_p_header *p_header, elf_t *elf)
     void *v_addr;
     uint8_t *pmem_raw;
 
+    /* Bytes past p_filez (e.g. .bss) must be zero */
     v_addr = (void *) p_header->p_vaddr;
-    pmem_raw = file_read(elf->file, current_filesystem, p_header->p_offset, p_header->p_memsz);
-    memcpy(v_addr, pmem_raw, p_header->p_memsz);
+    memset(v_addr, 0, p_header->p_memsz);
+    if (p_header->p_filez == 0)
+        return ELF_SUCCESS;
+
+    pmem_raw = file_read(elf->file, current_filesystem, p_header->p_offset, p_header->p_filez);
+    if (pmem_raw == NULL)
+        return ELF_MALLOC_ERROR;
+    memcpy(v_addr, pmem_raw, p_header->p_filez);
 
     kfree(pmem_raw);
 
@@ -100,6 +111,11 @@ elf_status_t elf_read_p_headers(elf_t *elf)
         p_header_raw = file_read(elf->file, current_filesystem, 
                                  elf->header.p_header_offset + (elf->header.p_entry_size * i), 
                                  elf->header.p_entry_size);
+        if (p_header_raw == NULL) {
+            kfree(elf->p_headers);
+            elf->p_headers = NULL;
+            return ELF_MALLOC_ERROR;
+        }
         memcpy(&elf->p_headers[i], p_header_raw, elf->header.p_entry_size);
 
         kfree(p_header_raw);
@@ -115,10 +131,15 @@ elf_status_t elf_init(elf_t *elf, file_t *file, fat_fs_t *fs)
 
     current_filesystem = fs;
     elf->file = file;
+    elf->p_headers = NULL;
     if((errno = elf_read_header(elf)))
         return errno;
-    if (elf->header.arch != ELF32_ARCH && elf->header.insset != ELF_X86)
+    if (elf->header.arch != ELF32_ARCH || elf->header.insset != ELF_X86 ||
+        elf->header.endianess != ELF_LITTLE_ENDIAN)
         return ELF_UNSUPPORTED_ARCH;
+    if (elf->header.type != ELF_TYPE_EXEC || elf->header.p_entry_num == 0 ||
+        elf->header.p_entry_size != sizeof(struct elf_p_header))
+        return ELF_GENERIC_ERROR;
     if((errno = elf_read_p_headers(elf)))
         return errno;
 
@@ -127,5 +148,7 @@ elf_status_t elf_init(elf_t *elf, file_t *file, fat_fs_t *fs)
 
 void elf_fini(elf_t *elf)
 {
-    kfree(elf->p_headers);
+    if (elf->p_headers != NULL)
+        kfree(elf->p_headers);
+    elf->p_headers = NULL;
 }

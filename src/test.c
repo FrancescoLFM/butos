@@ -288,35 +288,57 @@ void syscall_test() {
     clear_syscall(BLACK);
 }
 
-void elf_test() {
+static void run_program(fat_fs_t *fs, char *path)
+{
     elf_t elf;
+    file_t *file;
+    int exit_code;
+    elf_status_t elf_status;
+
+    file = file_open_path(fs, path);
+    if (file == NULL) {
+        printk("No program named %s\n", path);
+        return;
+    }
+    elf_status = elf_init(&elf, file, fs);
+    if (elf_status) {
+        printk("%s: invalid executable (error %d)\n", path, elf_status);
+    } else if (process_exec(&elf, &exit_code)) {
+        printk("%s: failed to execute\n", path);
+    } else {
+        printk("\n%s exited with code %d\n", path, exit_code);
+    }
+
+    elf_fini(&elf);
+    file_close(fs, file);
+}
+
+void elf_test() {
     struct disk *disk;
     fat_fs_t *fs;
-    file_t *file;
 
-    if (process_init())
+    if (process_init()) {
+        puts("Failed to initialize processes\n");
         return;
+    }
     disk = disk_init(ATA_DRIVE);
     if (disk == NULL)
         return;
     disk_set_offset(disk, FAT_PART_TYPE);
     
     fs = fat_fs_init(disk);
-    if (fs == NULL)
-         return;
-
-    file = file_open_path(fs, "/example");
     if (fs == NULL) {
-        puts("No program named example");
+        disk_fini(disk);
         return;
     }
-    if (elf_init(&elf, file, fs))
-        return;
-    
-    process_exec(&elf);
 
-    elf_fini(&elf);
-    file_close(fs, file);
+    /* Running twice checks that each exec cleans up after itself */
+    run_program(fs, "/example");
+    run_program(fs, "/example");
+    run_program(fs, "/datatest");
+    run_program(fs, "/missing");
+
     fat_fs_fini(fs);
     disk_fini(disk);
+    puts("ELF test completed\n");
 }
