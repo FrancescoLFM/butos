@@ -1,6 +1,5 @@
-CC = gcc
-OBJCOPY = objcopy
-OBJDUMP = objdump
+include ../toolchain.mk
+
 QEMU = qemu-system-x86_64
 
 FLAGS = -Wall -Wextra -Werror
@@ -24,10 +23,6 @@ EXECUTABLE = butos
 BINARY = butos.bin
 
 DEBUG_FILE = debug.dbg
-
-define color_text
-	@echo -e "\033[$1m$2\033[0m"
-endef
 
 .PHONY=all
 all: $(SOURCES_C) $(SOURCES_ASM) $(BINARY)

@@ -1,6 +1,4 @@
-CC = gcc
-OBJCOPY = objcopy
-OBJDUMP = objdump
+include ../../toolchain.mk
 
 FLAGS = -Wall -Wextra -Werror
 FLAGS += -fno-pie -m32
@@ -23,10 +21,6 @@ EXECUTABLE = boot
 BINARY = boot.bin
 
 DEBUG_FILE = debug.dbg
-
-define color_text
-	@echo -e "\033[$1m$2\033[0m"
-endef
 
 .PHONY=all
 all: $(SOURCES_C) $(SOURCES_ASM) $(BINARY)

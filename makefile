@@ -1,4 +1,4 @@
-DD		= dd
+include toolchain.mk
 
 INITDIR	= init
 ISODIR	= src
@@ -15,58 +15,49 @@ BOOTFILE = $(BOOTDIR)/boot.bin
 QEMUDIR = qemu
 IMG		= $(QEMUDIR)/vhdd.img
 PART	= $(QEMUDIR)/fat_part.img
-MOUNTDIR= $(QEMUDIR)/mount/
 TARGET	= $(IMG)
 SIZE	= 200K
 FORMAT  = raw
 VMARGS	= -device piix3-ide,id=ide -drive id=disk,file=$(IMG),format=$(FORMAT),if=none -device ide-hd,drive=disk,bus=ide.0 -m 2G
 
-DBG     = gdb
+DBG    ?= gdb
 DBGSYM  = src/butos
 DBGSCR  = scripts/butos.gdb
 
 PROGDIR = programs
 PROGBIN = $(PROGDIR)/bin/*
 
-define color_text
-	@echo -e "\033[$1m$2\033[0m"
-endef
-
 .PHONY=all
 all:
 	$(call color_text,91,"[MAKE] Compilazione del bootloader butos")
-	make -C $(BOOTDIR)
+	$(MAKE) -C $(BOOTDIR)
 	$(call color_text,91,"[MAKE] Compilazione del kernel butos")
-	make -C $(ISODIR)
+	$(MAKE) -C $(ISODIR)
 	$(call color_text,91,"[MAKE] Compilazione del bootloader in real mode")
-	make -C $(INITDIR)
-	make $(TARGET)
+	$(MAKE) -C $(INITDIR)
+	$(MAKE) $(TARGET)
 	$(call color_text,91,"[MAKE] Creazione della partizione FAT32")
 	rm -f $(PART)
 	mkfs.fat -F 32 --mbr=y -C $(PART) 1000
 	$(call color_text,91,"[MAKE] Compilazione degli eseguibili di base")
-	make -C $(PROGDIR)
-	$(call color_text,91,"[MAKE] Montaggio della partizione")
-	sudo mount -v $(PART) $(MOUNTDIR)
-	for i in $(PROGBIN) ; do \
-		sudo cp $$i $(MOUNTDIR); \
-	done
-	sudo umount -v $(MOUNTDIR)
+	$(MAKE) -C $(PROGDIR)
+	$(call color_text,91,"[MAKE] Copia degli eseguibili nella partizione")
+	mcopy -o -i $(PART) $(PROGBIN) ::/
 	dd if=$(PART) of=$(IMG) seek=203 
 
 $(TARGET): $(BINFILE)
 	$(call color_text,91,"[MAKE] Generazione del disco avviabile")
 	-mkdir $(QEMUDIR)
 	qemu-img create -f $(FORMAT) $@ $(SIZE)
-	$(DD) if=$^ of=$@ conv=notrunc
+	dd if=$^ of=$@ conv=notrunc
 
 
 $(BINFILE): $(ISO) $(INIT)
 	$(call color_text,91,"[MAKE] Generazione dell eseguibile complessivo")
 	-mkdir bin
-	$(DD) seek=0 bs=512 count=2 conv=notrunc if=$(INIT) of=$@
-	$(DD) seek=2 bs=512 conv=notrunc if=$(BOOTFILE) of=$@
-	$(DD) seek=66 bs=512 conv=notrunc if=$(ISO) of=$@
+	dd seek=0 bs=512 count=2 conv=notrunc if=$(INIT) of=$@
+	dd seek=2 bs=512 conv=notrunc if=$(BOOTFILE) of=$@
+	dd seek=66 bs=512 conv=notrunc if=$(ISO) of=$@
 
 .PHONY=silent
 silent:
@@ -75,15 +66,15 @@ silent:
 .PHONY=clean
 clean:
 	$(call color_text,91,"[MAKE] Pulizia dei file di compilazione nel kernel bootloader")
-	make -C $(BOOTDIR) clean
+	$(MAKE) -C $(BOOTDIR) clean
 	$(call color_text,91,"[MAKE] Pulizia dei file di compilazione nel kernel")
-	make -C $(ISODIR) clean
+	$(MAKE) -C $(ISODIR) clean
 	$(call color_text,91,"[MAKE] Pulizia dei file di compilazione nel bootloader")
-	make -C $(INITDIR) clean
+	$(MAKE) -C $(INITDIR) clean
 	$(call color_text,91,"[MAKE] Rimozione del disco generato")
 	rm $(TARGET)
 	rm $(BINFILE)
-	make -C $(PROGDIR) clean
+	$(MAKE) -C $(PROGDIR) clean
 
 .PHONY=run
 run:
@@ -95,7 +86,7 @@ vnc:
 
 .PHONY=disass
 disass:
-	make -C $(ISODIR) disass
+	$(MAKE) -C $(ISODIR) disass
 
 .PHONY=debug
 debug:

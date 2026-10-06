@@ -1,6 +1,5 @@
-CC = gcc
-OBJCOPY = objcopy
-OBJDUMP = objdump
+include ../../../toolchain.mk
+
 QEMU = qemu-system-x86_64
 
 BINDIR = ../../bin
@@ -19,10 +18,6 @@ SOURCES_C = $(wildcard *.c)
 OBJECTS = $(SOURCES_C:.c=.o)
 EXECUTABLE = $(BINDIR)/example
 
-define color_text
-	@echo -e "\033[$1m$2\033[0m"
-endef
-
 .PHONY=all
 all: $(SOURCES_C) $(SOURCES_ASM) $(EXECUTABLE)
 
@@ -30,6 +25,7 @@ all: $(SOURCES_C) $(SOURCES_ASM) $(EXECUTABLE)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(EXECUTABLE): $(OBJECTS)
+	mkdir -p $(BINDIR)
 	$(CC) $(CFLAGS) $^ -o $@ -T $(LDSCRIPT)
 
 .PHONY=clean

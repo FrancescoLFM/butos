@@ -6,10 +6,10 @@ TARGETS = $(BINDIR)/example
 .PHONY=all
 all:
 	for i in $(PROGRAM_SOURCES) ; do \
-		make -C $$i ; \
+		$(MAKE) -C $$i ; \
 	done;
 
 clean:
 	for i in $(PROGRAM_SOURCES) ; do \
-		make clean -C $$i ; \
+		$(MAKE) clean -C $$i ; \
 	done;

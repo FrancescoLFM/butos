@@ -6,7 +6,14 @@ Butos is a **bare metal program** that aspires to be a **framework** for other p
 ## Build
 
 ### Requirements
-To build butos you must have a linux environment with installed `lib32-glibc`, `qemu-img`, `dosfstools`, `bc` (Reference to arch linux packages)
+**Linux**: install `lib32-glibc`, `qemu`, `dosfstools`, `mtools` (Reference to arch linux packages)
+
+**macOS**: the system compiler cannot produce i386 ELF binaries, so an `i686-elf` cross toolchain is used automatically:
+```
+> brew install i686-elf-gcc dosfstools mtools qemu gdb
+```
+
+The toolchain prefix can be overridden with `make CROSS=<prefix>` (e.g. `make CROSS=i686-elf-` to use a cross compiler on Linux too). See `toolchain.mk`.
 
 ### Compile
 Compiling butos is pretty easy, run this command on your shell:
