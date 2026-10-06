@@ -18,8 +18,19 @@
 
 static struct allocator proc_allocator;
 static int proc_initialized = 0;
+/* Filesystem programs are loaded from by process_spawn */
+static fat_fs_t *proc_root_fs;
 
-int process_init() 
+static force_inline uintptr_t get_cr3()
+{
+    uintptr_t cr3;
+
+    __asm__ __volatile__ ("mov %%cr3, %0" : "=r"(cr3));
+
+    return cr3;
+}
+
+int process_init(fat_fs_t *root_fs) 
 {
     void *registry;
 
@@ -33,6 +44,7 @@ int process_init()
         kfree(registry);
         return EXIT_FAILURE;
     }
+    proc_root_fs = root_fs;
     proc_initialized = 1;
 
     return EXIT_SUCCESS;
@@ -88,6 +100,7 @@ int process_exec(elf_t *elf, int *exit_code)
 {
     uint32_t *kernel_dir;
     uint32_t *page_dir;
+    uintptr_t parent_dir;
     uintptr_t vstart, vend, paddr;
     uintptr_t entry = elf->header.p_entry_offset;
     int status = EXIT_FAILURE;
@@ -106,6 +119,8 @@ int process_exec(elf_t *elf, int *exit_code)
     if (page_dir == NULL)
         goto free_image;
     kernel_dir = get_blank_page_directory();
+    /* A process can exec another one (e.g. the shell), its mappings must come back after */
+    parent_dir = get_cr3();
     memcpy(page_dir, kernel_dir, PAGE_DIR_SIZE * sizeof(*page_dir));
     if (paging_map_range(page_dir, kernel_dir, vstart, paddr, vend - vstart, KERNEL_PAGE_ATTR))
         goto free_dir;
@@ -120,13 +135,35 @@ int process_exec(elf_t *elf, int *exit_code)
     status = EXIT_SUCCESS;
 
 restore_dir:
-    /* The kernel page directory is identity mapped, its address is also physical */
-    page_directory_load(kernel_dir);
+    page_directory_load((uint32_t *) parent_dir);
 free_dir:
     paging_free_tables(page_dir, kernel_dir);
     kfree(page_dir);
 free_image:
     allocator_free(&proc_allocator, paddr);
+
+    return status;
+}
+
+proc_status_t process_spawn(char *path, int *exit_code)
+{
+    elf_t elf;
+    file_t *file;
+    proc_status_t status = PROC_OK;
+
+    if (!proc_initialized || proc_root_fs == NULL)
+        return PROC_EXEC_FAILED;
+    /* path may live in the caller's image: it's only read before switching page directory */
+    file = file_open_path(proc_root_fs, path);
+    if (file == NULL)
+        return PROC_NOT_FOUND;
+    if (elf_init(&elf, file, proc_root_fs))
+        status = PROC_INVALID_EXEC;
+    else if (process_exec(&elf, exit_code))
+        status = PROC_EXEC_FAILED;
+
+    elf_fini(&elf);
+    file_close(proc_root_fs, file);
 
     return status;
 }

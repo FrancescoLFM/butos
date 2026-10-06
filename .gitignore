@@ -10,3 +10,4 @@ bochs*
 butos
 src/boot/boot
 programs/bin
+graphify-out/

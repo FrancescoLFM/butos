@@ -89,7 +89,7 @@ static force_inline void getchar_syscall(char *c)
         "int $0x80 \n"
         :  
         : "r"((uintptr_t)c)
-        : "eax", "ebx"
+        : "eax", "ebx", "memory"
     );
 }
 
@@ -108,7 +108,7 @@ static force_inline void kalloc_syscall(void **buff, size_t size)
         "int $0x80 \n"
         :  
         : "r"((uintptr_t)buff), "r"(size)
-        : "eax", "ebx"
+        : "eax", "ebx", "ecx", "memory"
     );
 }
 
@@ -124,6 +124,54 @@ static force_inline void kfree_syscall(void *buff)
         :  
         : "r"((uintptr_t)buff)
         : "eax", "ebx"
+    );
+}
+
+/* PROCESS SYSCALLS */
+
+/* exec_syscall return values */
+#define EXEC_OK             0
+#define EXEC_NOT_FOUND      1
+#define EXEC_INVALID        2
+#define EXEC_FAILED         3
+
+///@brief Run the program at path and wait for it to exit
+///@param EAX: Exec syscall num (7), on return the exec status
+///@param EBX: Program path
+///@param ECX: Pointer to the exit code (nullable)
+static force_inline int exec_syscall(char *path, int *exit_code) 
+{
+    int status;
+
+    __asm__ __volatile__ (
+        "mov $7, %%eax \n"
+        "mov %1, %%ebx \n"
+        "mov %2, %%ecx \n"
+        "int $0x80 \n"
+        : "=&a"(status)
+        : "r"((uintptr_t)path), "r"((uintptr_t)exit_code)
+        : "ebx", "ecx", "memory"
+    );
+
+    return status;
+}
+
+/* PRINT SYSCALLS (continued) */
+
+///@brief Display a C string with a color
+///@param EAX: Puts color syscall num (8)
+///@param EBX: Color
+///@param ECX: String to display
+static force_inline void puts_color_syscall(uint8_t color, char *s) 
+{
+    __asm__ __volatile__ (
+        "mov $8, %%eax \n"
+        "mov %0, %%ebx \n"
+        "mov %1, %%ecx \n"
+        "int $0x80"
+        :
+        : "r"((uintptr_t) color), "r"((uintptr_t) s) 
+        : "eax", "ebx", "ecx"
     );
 }
 

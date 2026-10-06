@@ -11,7 +11,11 @@ MEMORY
 SECTIONS
 {
     . = 0xC0000000;
-    .text : { *(.text) } > RAM
+    /* Stage 2 jumps to 0xC0000000, so main has to come first */
+    .text : {
+        *(.text.entry)
+        *(.text)
+    } > RAM
     .data : { *(.data) } > RAM
     .bss : {
         __bss_start = .;

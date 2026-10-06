@@ -317,10 +317,6 @@ void elf_test() {
     struct disk *disk;
     fat_fs_t *fs;
 
-    if (process_init()) {
-        puts("Failed to initialize processes\n");
-        return;
-    }
     disk = disk_init(ATA_DRIVE);
     if (disk == NULL)
         return;
@@ -328,6 +324,12 @@ void elf_test() {
     
     fs = fat_fs_init(disk);
     if (fs == NULL) {
+        disk_fini(disk);
+        return;
+    }
+    if (process_init(fs)) {
+        puts("Failed to initialize processes\n");
+        fat_fs_fini(fs);
         disk_fini(disk);
         return;
     }

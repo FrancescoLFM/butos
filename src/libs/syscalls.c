@@ -6,6 +6,7 @@
 #include <libs/scan.h>
 #include <libs/alloc.h>
 #include <cpu/idt.h>
+#include <cpu/proc.h>
 #include <include/asm.h>
 #include <stdarg.h>
 
@@ -36,10 +37,9 @@ void clear_handler(struct registers_t *regs)
 
 void getchar_handler(struct registers_t *regs)
 {
-    char c = getchar();
-    uint32_t *output = (uint32_t *) regs->ebx;
+    char *output = (char *) regs->ebx;
 
-    *output = (uint32_t) c;
+    *output = (char) getchar();
 }
 
 void kalloc_handler(struct registers_t *regs)
@@ -53,4 +53,21 @@ void kalloc_handler(struct registers_t *regs)
 void kfree_handler(struct registers_t *regs)
 {
     kfree((void *) regs->ebx);
+}
+
+void exec_handler(struct registers_t *regs)
+{
+    char *path = (char *) regs->ebx;
+    int *exit_code_ptr = (int *) regs->ecx;
+    int exit_code = 0;
+
+    /* The caller's image is unmapped while the child runs, write back only after */
+    regs->eax = (uint32_t) process_spawn(path, &exit_code);
+    if (exit_code_ptr != NULL)
+        *exit_code_ptr = exit_code;
+}
+
+void puts_color_handler(struct registers_t *regs)
+{
+    puts_c((uint8_t) regs->ebx, (char *) regs->ecx);
 }

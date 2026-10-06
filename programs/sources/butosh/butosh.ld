@@ -1,0 +1,18 @@
+OUTPUT_FORMAT("elf32-i386", "elf32-i386", "elf32-i386")
+ENTRY(main)
+
+OUTPUT_ARCH(i386)
+
+MEMORY
+{
+    RAM (rwx) : ORIGIN = 0x01000000, LENGTH = 1M
+}
+
+SECTIONS
+{
+    . = 0x01000000;
+    .text : { *(.text*) } > RAM
+    .rodata : { *(.rodata*) } > RAM
+    .data : { *(.data*) } > RAM
+    .bss : { *(.bss*) *(COMMON) } > RAM
+}
