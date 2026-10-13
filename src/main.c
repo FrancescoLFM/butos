@@ -74,7 +74,8 @@ __attribute__((section(".text.entry"))) void main()
     void *heap_start = (void *) 0xC00f0000;
     size_t heap_size = 492032;
     void *registry_start = (unsigned char *)heap_start + heap_size;
-    size_t registry_capacity = 100 * 8;
+    /* Bytes, 8 per block: bounds how many allocations can be live at once */
+    size_t registry_capacity = 1000 * 8;
 
     kalloc_start(
         heap_start,
