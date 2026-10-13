@@ -84,22 +84,25 @@ static int process_image_span(elf_t *elf, uintptr_t *start, uintptr_t *end)
     return EXIT_SUCCESS;
 }
 
-/* The program runs in ring 0 on the kernel stack and follows the cdecl ABI */
-static int process_call(uintptr_t entry)
+/* The program runs in ring 0 on the kernel stack and follows the cdecl ABI: main(argc, argv) */
+static int process_call(uintptr_t entry, int argc, char **argv)
 {
     int ret;
 
     __asm__ __volatile__ (
-        "call *%1"
+        "push %3 \n"
+        "push %2 \n"
+        "call *%1 \n"
+        "add $8, %%esp"
         : "=a"(ret)
-        : "r"(entry)
+        : "r"(entry), "r"(argc), "r"(argv)
         : "ecx", "edx", "memory", "cc"
     );
 
     return ret;
 }
 
-int process_exec(elf_t *elf, int *exit_code)
+int process_exec(elf_t *elf, int argc, char **argv, int *exit_code)
 {
     uint32_t *kernel_dir;
     uint32_t *page_dir;
@@ -135,7 +138,7 @@ int process_exec(elf_t *elf, int *exit_code)
                 goto restore_dir;
     }
     proc_depth++;
-    *exit_code = process_call(entry);
+    *exit_code = process_call(entry, argc, argv);
     /* Files the process left open */
     fd_close_owned(proc_depth);
     proc_depth--;
@@ -157,10 +160,51 @@ int process_depth(void)
     return proc_depth;
 }
 
-proc_status_t process_spawn(char *path, int *exit_code)
+/* 
+    Copies argv (NULL terminated, NULL means just path) in one kernel heap block:
+    the pointer array followed by the strings. The caller's image is unmapped
+    while the new process runs, so its strings can't be passed as they are.
+*/
+static char **process_args_copy(char *path, char **argv, int *argc)
+{
+    char *default_argv[] = {path, NULL};
+    char **copy;
+    char *str;
+    size_t size = 0, len;
+    int count = 0;
+
+    if (argv == NULL)
+        argv = default_argv;
+    for (; argv[count] != NULL; count++) {
+        if (count == PROC_MAX_ARGS)
+            return NULL;
+        size += strlen(argv[count]) + 1;
+        if (size > PROC_MAX_ARGS_SIZE)
+            return NULL;
+    }
+
+    copy = kalloc((count + 1) * sizeof(char *) + size);
+    if (copy == NULL)
+        return NULL;
+    str = (char *) &copy[count + 1];
+    for (int i = 0; i < count; i++) {
+        len = strlen(argv[i]) + 1;
+        memcpy(str, argv[i], len);
+        copy[i] = str;
+        str += len;
+    }
+    copy[count] = NULL;
+    *argc = count;
+
+    return copy;
+}
+
+proc_status_t process_spawn(char *path, char **argv, int *exit_code)
 {
     elf_t elf;
     file_t *file;
+    char **args;
+    int argc;
     proc_status_t status = PROC_OK;
 
     if (!proc_initialized || proc_root_fs == NULL)
@@ -169,13 +213,19 @@ proc_status_t process_spawn(char *path, int *exit_code)
     file = file_open_path(proc_root_fs, path);
     if (file == NULL)
         return PROC_NOT_FOUND;
+    args = process_args_copy(path, argv, &argc);
+    if (args == NULL) {
+        file_close(proc_root_fs, file);
+        return PROC_INVALID_ARGS;
+    }
     if (elf_init(&elf, file, proc_root_fs))
         status = PROC_INVALID_EXEC;
-    else if (process_exec(&elf, exit_code))
+    else if (process_exec(&elf, argc, args, exit_code))
         status = PROC_EXEC_FAILED;
 
     elf_fini(&elf);
     file_close(proc_root_fs, file);
+    kfree(args);
 
     return status;
 }

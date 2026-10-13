@@ -60,10 +60,11 @@ void exec_handler(struct registers_t *regs)
 {
     char *path = (char *) regs->ebx;
     int *exit_code_ptr = (int *) regs->ecx;
+    char **argv = (char **) regs->edx;
     int exit_code = 0;
 
     /* The caller's image is unmapped while the child runs, write back only after */
-    regs->eax = (uint32_t) process_spawn(path, &exit_code);
+    regs->eax = (uint32_t) process_spawn(path, argv, &exit_code);
     if (exit_code_ptr != NULL)
         *exit_code_ptr = exit_code;
 }

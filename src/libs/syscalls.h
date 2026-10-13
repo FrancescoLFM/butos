@@ -164,23 +164,22 @@ static force_inline void kfree_syscall(void *buff)
 #define EXEC_NOT_FOUND      1
 #define EXEC_INVALID        2
 #define EXEC_FAILED         3
+#define EXEC_INVALID_ARGS   4
 
-///@brief Run the program at path and wait for it to exit
+///@brief Run the program at path as main(argc, argv) and wait for it to exit
 ///@param EAX: Exec syscall num (7), on return the exec status
 ///@param EBX: Program path
 ///@param ECX: Pointer to the exit code (nullable)
-static force_inline int exec_syscall(char *path, int *exit_code) 
+///@param EDX: NULL terminated arguments, program name first (NULL means just path)
+static force_inline int exec_syscall(char *path, char **argv, int *exit_code) 
 {
     int status;
 
     __asm__ __volatile__ (
-        "mov $7, %%eax \n"
-        "mov %1, %%ebx \n"
-        "mov %2, %%ecx \n"
         "int $0x80 \n"
-        : "=&a"(status)
-        : "r"((uintptr_t)path), "r"((uintptr_t)exit_code)
-        : "ebx", "ecx", "memory"
+        : "=a"(status)
+        : "a"(7), "b"((uintptr_t)path), "c"((uintptr_t)exit_code), "d"((uintptr_t)argv)
+        : "memory"
     );
 
     return status;

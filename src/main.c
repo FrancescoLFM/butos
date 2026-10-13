@@ -52,7 +52,7 @@ static void init_start()
     }
 
     for (;;) {
-        status = process_spawn(INIT_PATH, &exit_code);
+        status = process_spawn(INIT_PATH, NULL, &exit_code);
         if (status != PROC_OK) {
             printk("Failed to start %s (error %d)\n", INIT_PATH, status);
             return;
