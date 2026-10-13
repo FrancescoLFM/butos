@@ -235,6 +235,8 @@ static int builtin_program_execute(struct command *cmd)
 static int program_execute(struct command *cmd)
 {
     char path[PATH_SIZE];
+    /* Program name, arguments and the NULL terminator */
+    char *argv[MAX_ARGS + 2];
     int exit_code;
     size_t len = strlen(cmd->name);
 
@@ -245,7 +247,11 @@ static int program_execute(struct command *cmd)
         memcpy(path + 1, cmd->name, len + 1);
     }
 
-    switch (exec_syscall(path, &exit_code)) {
+    argv[0] = cmd->name;
+    memcpy(&argv[1], cmd->args, cmd->argc * sizeof(char *));
+    argv[cmd->argc + 1] = NULL;
+
+    switch (exec_syscall(path, argv, &exit_code)) {
     case EXEC_OK:
         if (exit_code != EXIT_SUCCESS)
             printf_syscall("\n%s exited with code %d\n", cmd->name, exit_code);
@@ -255,6 +261,9 @@ static int program_execute(struct command *cmd)
         break;
     case EXEC_INVALID:
         printf_syscall("%s: invalid executable\n", cmd->name);
+        break;
+    case EXEC_INVALID_ARGS:
+        printf_syscall("%s: arguments too long\n", cmd->name);
         break;
     default:
         printf_syscall("%s: failed to execute\n", cmd->name);
