@@ -1,9 +1,9 @@
 include ../toolchain.mk
+include ../layout.mk
 
 NAME		= bootloader
 
-SECTORS 	= $(shell printf "0x%X" $$(( $$(wc -c < ../src/butos.bin) / 512 + 1 )))
-ASFLAGS		= -I./ --defsym SEC=$(SECTORS)
+ASFLAGS		= -I./ $(LAYOUT_DEFS)
 
 LDSCR		= $(NAME).ld
 
@@ -20,8 +20,13 @@ all: $(BINARY)
 %.o: %.s
 	$(AS) $(ASFLAGS) $< -o $@
 
-# SEC (kernel size in sectors) is baked into init.o
-init.o: ../src/butos.bin
+# The disk layout (layout.mk) is baked into init.o
+init.o: init.s $(STAGE2_BIN) $(KERNEL_BIN)
+	@test $(STAGE2_SECTORS) -le $(STAGE2_MAX_SECTORS) || \
+		{ echo "Stage 2 too big: $(STAGE2_SECTORS) > $(STAGE2_MAX_SECTORS) sectors"; exit 1; }
+	@test $(KERNEL_SECTORS) -le $(KERNEL_MAX_SECTORS) || \
+		{ echo "Kernel too big: $(KERNEL_SECTORS) > $(KERNEL_MAX_SECTORS) sectors"; exit 1; }
+	$(AS) $(ASFLAGS) $< -o $@
 
 $(EXECUTABLE): $(OBJECTS)
 	$(call color_text,33,"[INIT] Linking del bootloader")

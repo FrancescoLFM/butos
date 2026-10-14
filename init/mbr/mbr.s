@@ -41,7 +41,7 @@ PT1:
     .word 1    # Cylinder 0, head 1
     .byte 247  # 100kb
     .long 1
-    .long 202
+    .long FAT_LBA - 1
 
 PT2:
     .byte 0x80 # Active partition
@@ -50,6 +50,6 @@ PT2:
     .byte 0xC  # FAT32 with lba
     .word 0
     .byte 0
-    .long 203
+    .long FAT_LBA
     .long 65312
 

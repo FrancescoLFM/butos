@@ -18,16 +18,13 @@ init:
 _start:
     # Reading the kernel bootloader from the disk
     movb    %dl, (drive_number)
-    mov     $0x0003, %cx
-    mov     $bootloader_size, %al
-    xor     %dh, %dh
+    mov     $bootloader_lba, %cx
+    mov     $bootloader_size, %ax
     mov     $bootloader_start, %bx
     call    read_sector
     # Reading the kernel from the disk
-    movb    %dl, (drive_number)
-    mov     $kernel_sector, %cx
-    mov     $kernel_head, %dh
-    mov     (num_sectors), %al
+    mov     $kernel_lba, %cx
+    mov     (num_sectors), %ax
     mov     $kernel_start, %bx
     call    read_sector
 
@@ -70,4 +67,4 @@ drive_number:
     .byte   0x00
 
 num_sectors:
-    .byte   SEC
+    .word   SEC

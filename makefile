@@ -1,4 +1,5 @@
 include toolchain.mk
+include layout.mk
 
 INITDIR	= init
 ISODIR	= src
@@ -36,6 +37,12 @@ all:
 	$(call color_text,91,"[MAKE] Compilazione del bootloader in real mode")
 	$(MAKE) -C $(INITDIR)
 	$(MAKE) $(TARGET)
+	$(MAKE) fat
+
+# Separate target (run in a sub-make): the layout in layout.mk depends on
+# the binaries built above, and a recipe is expanded before it runs.
+.PHONY=fat
+fat:
 	$(call color_text,91,"[MAKE] Creazione della partizione FAT32")
 	rm -f $(PART)
 	mkfs.fat -F 32 --mbr=y -C $(PART) 1000
@@ -44,7 +51,7 @@ all:
 	$(MAKE) -C $(PROGDIR)
 	$(call color_text,91,"[MAKE] Copia degli eseguibili nella partizione")
 	mcopy -o -i $(PART) $(PROGBIN) ::/usr/bin/
-	dd if=$(PART) of=$(IMG) seek=203 
+	dd if=$(PART) of=$(IMG) seek=$(FAT_LBA)
 
 $(TARGET): $(BINFILE)
 	$(call color_text,91,"[MAKE] Generazione del disco avviabile")
@@ -53,17 +60,12 @@ $(TARGET): $(BINFILE)
 	dd if=$^ of=$@ conv=notrunc
 
 
-# The kernel lives between sector 66 and the FAT partition at sector 203
-KERNEL_MAX_SIZE = $(shell echo $$(( (203 - 66) * 512 )))
-
 $(BINFILE): $(ISO) $(INIT)
-	@test $$(wc -c < $(ISO)) -le $(KERNEL_MAX_SIZE) || \
-		{ echo "Kernel too big: $$(wc -c < $(ISO)) > $(KERNEL_MAX_SIZE) bytes"; exit 1; }
 	$(call color_text,91,"[MAKE] Generazione dell eseguibile complessivo")
 	-mkdir bin
 	dd seek=0 bs=512 count=2 conv=notrunc if=$(INIT) of=$@
-	dd seek=2 bs=512 conv=notrunc if=$(BOOTFILE) of=$@
-	dd seek=66 bs=512 conv=notrunc if=$(ISO) of=$@
+	dd seek=$(STAGE2_LBA) bs=512 conv=notrunc if=$(BOOTFILE) of=$@
+	dd seek=$(KERNEL_LBA) bs=512 conv=notrunc if=$(ISO) of=$@
 
 .PHONY=silent
 silent:

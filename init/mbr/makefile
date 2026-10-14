@@ -1,4 +1,5 @@
 include ../../toolchain.mk
+include ../../layout.mk
 
 NAME		= bootstrap
 
@@ -15,7 +16,10 @@ OBJECTS		:= $(patsubst %.s,%.o,$(SOURCES))
 all: $(BINARY)
 
 %.o: %.s
-	$(AS) $< -o $@
+	$(AS) $(LAYOUT_DEFS) $< -o $@
+
+# The partition table holds FAT_LBA (layout.mk)
+mbr.o: $(STAGE2_BIN) $(KERNEL_BIN)
 
 $(EXECUTABLE): $(OBJECTS)
 	$(call color_text,33,"[INIT] Linking del bootstrap")

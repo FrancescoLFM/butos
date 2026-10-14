@@ -23,15 +23,15 @@ There is no test framework. `src/test.c` contains ad-hoc in-kernel test function
 
 ## Boot chain and disk layout
 
-Pieces are stitched together with `dd` in the top-level `makefile` — offsets there must stay consistent with constants in the assembly:
+Pieces are stitched together with `dd` in the top-level `makefile`. Sector offsets are not hard-coded: `layout.mk` computes them from the sizes of the built binaries (`STAGE2_LBA`, `KERNEL_LBA`, `FAT_LBA`, ...) and passes them to `init`/`mbr` with `--defsym`, so `src` and `src/boot` must be built before `init`:
 
-1. `init/mbr/mbr.s` (sector 0, linked at 0x0600) — self-relocates, loads sector 1 to 0x7C00.
-2. `init/init.s` + `init/libs/*.s` (sector 1, 0x7C00) — real mode: reads stage 2 (`bootloader_start` 0x7E00, `bootloader_size` sectors) and the kernel (to `kernel_start` 0xF000), loads GDT, enters protected mode, copies the kernel to 0x100000, jumps to stage 2. Kernel sector count `SEC` is computed at build time from `src/butos.bin` size (`init/makefile`), so `src` must be built before `init`. Addresses live in `init/include/macro.s`.
-3. `src/boot/startk.c` (image sector 2, linked at 0x7E00) — `paging_init()` (identity map + higher-half map), moves the stack to 0xC00F0000, jumps to 0xC0000000. Built separately but reuses `src/cpu/paging.c` and `apaging.s`.
-4. Kernel `src/` (image sector 66, physical 0x100000, linked at virtual 0xC0000000 via `src/butos.ld`, entry `main`). Stage 2 jumps to 0xC0000000 directly, so `main` lives in `.text.entry`, which `butos.ld` places first.
-5. FAT32 partition image written at sector 203 of `qemu/vhdd.img`; holds user programs.
+1. `init/mbr/mbr.s` (sector 0, linked at 0x0600) — self-relocates, loads sector 1 to 0x7C00. Its partition table points at `FAT_LBA`.
+2. `init/init.s` + `init/libs/*.s` (sector 1, 0x7C00) — real mode: reads stage 2 (to `bootloader_start` 0x7E00) and the kernel (to `kernel_start` 0xF000) with INT 13h extensions (`read_sector` splits reads into chunks so they never cross a 64K segment), loads GDT, enters protected mode, copies the kernel to 0x100000, jumps to stage 2. Addresses live in `init/include/macro.s`; the load windows bound stage 2 to 57 sectors and the kernel to 1158 (`*_MAX_SECTORS` in `layout.mk`, checked by `init/makefile`).
+3. `src/boot/startk.c` (`STAGE2_LBA` = 2, linked at 0x7E00) — `paging_init()` (identity map + higher-half map), moves the stack to 0xC00F0000, jumps to 0xC0000000. Built separately but reuses `src/cpu/paging.c` and `apaging.s`.
+4. Kernel `src/` (`KERNEL_LBA`, right after stage 2; physical 0x100000, linked at virtual 0xC0000000 via `src/butos.ld`, entry `main`). Stage 2 jumps to 0xC0000000 directly, so `main` lives in `.text.entry`, which `butos.ld` places first.
+5. FAT32 partition image written at `FAT_LBA` (right after the kernel) of `qemu/vhdd.img`; holds user programs. The kernel finds it through the MBR partition table.
 
-Changing stage-2 size or these sector offsets requires updating both the `makefile` `dd seek=` values and `macro.s`. The build fails if the kernel outgrows the 137 sectors before the FAT partition. Page directory entries default to not-present, so stray accesses page fault instead of silently hitting physical page 0.
+The FAT32 step runs as a separate `make fat` sub-make because recipes are expanded before running and the layout depends on binaries built earlier in `all`. Page directory entries default to not-present, so stray accesses page fault instead of silently hitting physical page 0.
 
 ## Kernel architecture (`src/`)
 
