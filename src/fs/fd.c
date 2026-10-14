@@ -370,3 +370,58 @@ void fd_close_owned(int owner)
         if (fd_table[fd].used && fd_table[fd].owner >= owner)
             fd_close(fd);
 }
+
+static void decode_83(const char *raw, char *out)
+{
+    int i, j = 0;
+    char c;
+
+    for (i = 0; i < FILENAME_LEN && raw[i] != ' '; i++) {
+        c = raw[i];
+        out[j++] = (c >= 'A' && c <= 'Z') ? (char)(c + 32) : c;
+    }
+    if (raw[FILENAME_LEN] != ' ') {
+        out[j++] = '.';
+        for (i = FILENAME_LEN; i < SHORT_NAME_LEN && raw[i] != ' '; i++) {
+            c = raw[i];
+            out[j++] = (c >= 'A' && c <= 'Z') ? (char)(c + 32) : c;
+        }
+    }
+    out[j] = '\0';
+}
+
+int fd_readdir(char *path, int index, fd_dirent_t *out)
+{
+    dir_t *dir;
+    int real_idx = 0;
+    size_t i;
+    entry_t *e;
+
+    if (fd_root_fs == NULL || path == NULL || out == NULL || index < 0)
+        return FD_INVALID;
+
+    dir = dir_open_path(fd_root_fs, path);
+    if (dir == NULL)
+        return FD_NOT_FOUND;
+
+    dir_scan(fd_root_fs, dir);
+
+    for (i = 0; i < dir->num_entries; i++) {
+        e = dir->entries[i];
+        if (e == NULL)
+            break;
+        if (e->short_name[0] == '.')
+            continue;
+        if (real_idx == index) {
+            decode_83(e->short_name, out->name);
+            out->is_dir = (e->attr & DIR_ATTR) != 0;
+            out->size   = e->size;
+            dir_close(fd_root_fs, dir);
+            return 1;
+        }
+        real_idx++;
+    }
+
+    dir_close(fd_root_fs, dir);
+    return 0;
+}

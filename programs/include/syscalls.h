@@ -307,7 +307,7 @@ static force_inline int create_syscall(char *path)
 ///@brief Delete a file that is not open
 ///@param EAX: Remove syscall num (15), on return the status
 ///@param EBX: Absolute file path
-static force_inline int remove_syscall(char *path) 
+static force_inline int remove_syscall(char *path)
 {
     int ret;
 
@@ -318,6 +318,31 @@ static force_inline int remove_syscall(char *path)
         : "=&a"(ret)
         : "r"((uintptr_t)path)
         : "ebx", "memory"
+    );
+
+    return ret;
+}
+
+struct dirent {
+    char     name[13];
+    int      is_dir;
+    unsigned int size;
+};
+
+///@brief Read directory entry at index (0-based, skips . and ..)
+///@param EAX: Readdir syscall num (16), on return 1=found, 0=end, negative=error
+///@param EBX: Directory path
+///@param ECX: Entry index
+///@param EDX: Pointer to struct dirent to fill
+static force_inline int readdir_syscall(char *path, int index, struct dirent *entry)
+{
+    int ret;
+
+    __asm__ __volatile__ (
+        "int $0x80 \n"
+        : "=a"(ret)
+        : "a"(16), "b"((uintptr_t)path), "c"(index), "d"((uintptr_t)entry)
+        : "memory"
     );
 
     return ret;

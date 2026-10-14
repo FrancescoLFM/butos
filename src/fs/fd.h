@@ -45,6 +45,17 @@ fd_status_t fd_remove(char *path);
 /* Closes the descriptors opened at process nesting depth owner or deeper */
 void fd_close_owned(int owner);
 
+/* Entry returned by fd_readdir; name is decoded 8.3, lowercased, NUL-terminated */
+typedef struct {
+    char     name[13];
+    int      is_dir;
+    uint32_t size;
+} fd_dirent_t;
+
+/* Returns 1 if entry at index exists (fills *out), 0 at end-of-dir, negative fd_status_t on error.
+ * Skips deleted, LFN, and dot entries. index is 0-based over visible entries. */
+int fd_readdir(char *path, int index, fd_dirent_t *out);
+
 /* Register/unregister RAM-backed virtual files.
  * vfd_register may be called before or after fd_init.
  * vfd_unregister fails with FD_BUSY if the file is open. */

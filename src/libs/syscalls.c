@@ -108,3 +108,8 @@ void remove_handler(struct registers_t *regs)
 {
     regs->eax = (uint32_t) fd_remove((char *) regs->ebx);
 }
+
+void readdir_handler(struct registers_t *regs)
+{
+    regs->eax = (uint32_t) fd_readdir((char *) regs->ebx, (int) regs->ecx, (fd_dirent_t *) regs->edx);
+}
