@@ -8,6 +8,14 @@
 
 #define FD_MAX          16
 
+#define VFD_MAX         8
+#define VFD_PATH_MAX    64
+
+typedef enum {
+    FD_TYPE_FAT32,
+    FD_TYPE_RAM,
+} fd_type_t;
+
 #define FD_SEEK_SET     0
 #define FD_SEEK_CUR     1
 #define FD_SEEK_END     2
@@ -36,5 +44,11 @@ fd_status_t fd_create(char *path);
 fd_status_t fd_remove(char *path);
 /* Closes the descriptors opened at process nesting depth owner or deeper */
 void fd_close_owned(int owner);
+
+/* Register/unregister RAM-backed virtual files.
+ * vfd_register may be called before or after fd_init.
+ * vfd_unregister fails with FD_BUSY if the file is open. */
+fd_status_t vfd_register(const char *path, void *buf, size_t size, int writable);
+fd_status_t vfd_unregister(const char *path);
 
 #endif
