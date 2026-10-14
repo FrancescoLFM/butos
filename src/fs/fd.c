@@ -3,17 +3,34 @@
 #include <libs/alloc.h>
 #include <libs/string.h>
 
+struct vfd_entry {
+    int used;
+    char path[VFD_PATH_MAX];
+    uint8_t *buf;
+    size_t size;
+    int writable;
+};
+
 struct fd_entry {
     int used;
     int dirty;
     /* Process nesting depth that opened the file */
     int owner;
     uint32_t pos;
-    file_t *file;
+    fd_type_t type;
+    union {
+        file_t *file;
+        struct {
+            uint8_t *buf;
+            size_t   size;
+            int      writable;
+        } ram;
+    };
 };
 
 static fat_fs_t *fd_root_fs;
 static struct fd_entry fd_table[FD_MAX];
+static struct vfd_entry vfd_table[VFD_MAX];
 
 void fd_init(fat_fs_t *root_fs)
 {
@@ -29,24 +46,90 @@ static struct fd_entry *fd_get(int fd)
     return &fd_table[fd];
 }
 
+fd_status_t vfd_register(const char *path, void *buf, size_t size, int writable)
+{
+    int i;
+
+    if (path == NULL || *path != '/' || buf == NULL)
+        return FD_INVALID;
+    if (strlen(path) >= VFD_PATH_MAX)
+        return FD_INVALID;
+
+    for (i = 0; i < VFD_MAX; i++)
+        if (vfd_table[i].used && strcmp(vfd_table[i].path, path) == 0)
+            return FD_EXISTS;
+
+    for (i = 0; i < VFD_MAX; i++) {
+        if (!vfd_table[i].used) {
+            strncpy(vfd_table[i].path, path, VFD_PATH_MAX - 1);
+            vfd_table[i].path[VFD_PATH_MAX - 1] = '\0';
+            vfd_table[i].buf      = (uint8_t *) buf;
+            vfd_table[i].size     = size;
+            vfd_table[i].writable = writable;
+            vfd_table[i].used     = 1;
+            return FD_OK;
+        }
+    }
+    return FD_TOO_MANY;
+}
+
+fd_status_t vfd_unregister(const char *path)
+{
+    int i, fd;
+
+    if (path == NULL)
+        return FD_INVALID;
+
+    for (i = 0; i < VFD_MAX; i++) {
+        if (!vfd_table[i].used || strcmp(vfd_table[i].path, path) != 0)
+            continue;
+        for (fd = 0; fd < FD_MAX; fd++) {
+            if (fd_table[fd].used && fd_table[fd].type == FD_TYPE_RAM &&
+                fd_table[fd].ram.buf == vfd_table[i].buf)
+                return FD_BUSY;
+        }
+        vfd_table[i].used = 0;
+        return FD_OK;
+    }
+    return FD_NOT_FOUND;
+}
+
 int fd_open(char *path)
 {
-    int fd;
+    int fd, i;
 
-    if (fd_root_fs == NULL || path == NULL || *path != '/')
+    if (path == NULL || *path != '/')
         return FD_INVALID;
 
     for (fd = 0; fd < FD_MAX && fd_table[fd].used; fd++);
     if (fd == FD_MAX)
         return FD_TOO_MANY;
 
+    for (i = 0; i < VFD_MAX; i++) {
+        if (!vfd_table[i].used || strcmp(vfd_table[i].path, path) != 0)
+            continue;
+        fd_table[fd].type         = FD_TYPE_RAM;
+        fd_table[fd].ram.buf      = vfd_table[i].buf;
+        fd_table[fd].ram.size     = vfd_table[i].size;
+        fd_table[fd].ram.writable = vfd_table[i].writable;
+        fd_table[fd].used         = 1;
+        fd_table[fd].dirty        = 0;
+        fd_table[fd].owner        = process_depth();
+        fd_table[fd].pos          = 0;
+        return fd;
+    }
+
+    if (fd_root_fs == NULL)
+        return FD_INVALID;
+
     fd_table[fd].file = file_open_path(fd_root_fs, path);
     if (fd_table[fd].file == NULL)
         return FD_NOT_FOUND;
-    fd_table[fd].used = 1;
+    fd_table[fd].type  = FD_TYPE_FAT32;
+    fd_table[fd].used  = 1;
     fd_table[fd].dirty = 0;
     fd_table[fd].owner = process_depth();
-    fd_table[fd].pos = 0;
+    fd_table[fd].pos   = 0;
 
     return fd;
 }
@@ -60,10 +143,12 @@ fd_status_t fd_close(int fd)
     if (entry == NULL)
         return FD_INVALID;
 
-    if (entry->dirty && file_sync(fd_root_fs, entry->file))
-        status = FD_IO_ERROR;
-    file_close(fd_root_fs, entry->file);
-    entry->file = NULL;
+    if (entry->type == FD_TYPE_FAT32) {
+        if (entry->dirty && file_sync(fd_root_fs, entry->file))
+            status = FD_IO_ERROR;
+        file_close(fd_root_fs, entry->file);
+        entry->file = NULL;
+    }
     entry->used = 0;
 
     return status;
@@ -73,11 +158,19 @@ int fd_read(int fd, void *buffer, size_t size)
 {
     struct fd_entry *entry;
     uint8_t *out = buffer;
-    size_t i;
+    size_t avail, to_read, i;
 
     entry = fd_get(fd);
     if (entry == NULL || buffer == NULL)
         return FD_INVALID;
+
+    if (entry->type == FD_TYPE_RAM) {
+        avail   = (entry->pos < entry->ram.size) ? entry->ram.size - entry->pos : 0;
+        to_read = (size < avail) ? size : avail;
+        memcpy(out, entry->ram.buf + entry->pos, to_read);
+        entry->pos += (uint32_t) to_read;
+        return (int) to_read;
+    }
 
     for (i = 0; i < size && entry->pos < entry->file->entry->size; i++, entry->pos++)
         out[i] = file_readb(entry->file, fd_root_fs, entry->pos);
@@ -96,6 +189,19 @@ int fd_write(int fd, void *buffer, size_t size)
     if (size == 0)
         return 0;
 
+    if (entry->type == FD_TYPE_RAM) {
+        if (!entry->ram.writable)
+            return FD_IO_ERROR;
+        if (entry->pos >= entry->ram.size)
+            return FD_IO_ERROR;
+        written = entry->ram.size - entry->pos;
+        if (size < written)
+            written = size;
+        memcpy(entry->ram.buf + entry->pos, (uint8_t *) buffer, written);
+        entry->pos += (uint32_t) written;
+        return (int) written;
+    }
+
     written = file_write(entry->file, fd_root_fs, entry->pos, buffer, size);
     entry->pos += written;
     if (written)
@@ -109,12 +215,17 @@ int fd_write(int fd, void *buffer, size_t size)
 int fd_seek(int fd, int offset, int whence)
 {
     struct fd_entry *entry;
+    uint32_t file_size;
     int base;
     int pos;
 
     entry = fd_get(fd);
     if (entry == NULL)
         return FD_INVALID;
+
+    file_size = (entry->type == FD_TYPE_FAT32)
+        ? entry->file->entry->size
+        : (uint32_t) entry->ram.size;
 
     switch (whence) {
     case FD_SEEK_SET:
@@ -124,14 +235,14 @@ int fd_seek(int fd, int offset, int whence)
         base = (int) entry->pos;
         break;
     case FD_SEEK_END:
-        base = (int) entry->file->entry->size;
+        base = (int) file_size;
         break;
     default:
         return FD_INVALID;
     }
 
     pos = base + offset;
-    if (pos < 0 || (uint32_t) pos > entry->file->entry->size)
+    if (pos < 0 || (uint32_t) pos > file_size)
         return FD_INVALID;
     entry->pos = (uint32_t) pos;
 
@@ -177,8 +288,16 @@ fd_status_t fd_create(char *path)
     char *name;
     file_t *file;
     fd_status_t status = FD_OK;
+    int i;
 
-    if (fd_root_fs == NULL || path == NULL || *path != '/')
+    if (path == NULL || *path != '/')
+        return FD_INVALID;
+
+    for (i = 0; i < VFD_MAX; i++)
+        if (vfd_table[i].used && strcmp(vfd_table[i].path, path) == 0)
+            return FD_EXISTS;
+
+    if (fd_root_fs == NULL)
         return FD_INVALID;
 
     file = file_open_path(fd_root_fs, path);
@@ -210,8 +329,16 @@ fd_status_t fd_remove(char *path)
 {
     file_t *file;
     file_t *open;
+    int i;
 
-    if (fd_root_fs == NULL || path == NULL || *path != '/')
+    if (path == NULL || *path != '/')
+        return FD_INVALID;
+
+    for (i = 0; i < VFD_MAX; i++)
+        if (vfd_table[i].used && strcmp(vfd_table[i].path, path) == 0)
+            return FD_INVALID;
+
+    if (fd_root_fs == NULL)
         return FD_INVALID;
 
     file = file_open_path(fd_root_fs, path);
@@ -220,7 +347,7 @@ fd_status_t fd_remove(char *path)
 
     /* Removing an open file would leave its descriptor pointing to freed clusters */
     for (int fd = 0; fd < FD_MAX; fd++) {
-        if (!fd_table[fd].used)
+        if (!fd_table[fd].used || fd_table[fd].type != FD_TYPE_FAT32)
             continue;
         open = fd_table[fd].file;
         if (open->path != NULL && file->path != NULL && !strcmp(open->path, file->path) &&
