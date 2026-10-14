@@ -1,5 +1,8 @@
 #include <fs/fd.h>
+#include <fs/procfs.h>
 #include <cpu/proc.h>
+#include <drivers/console.h>
+#include <include/colors.h>
 #include <libs/alloc.h>
 #include <libs/string.h>
 
@@ -18,13 +21,19 @@ struct fd_entry {
     int owner;
     uint32_t pos;
     fd_type_t type;
+    /* Path it was opened with, to reopen it through /proc/<pid>/fd (NULL for the console) */
+    char *path;
     union {
         file_t *file;
         struct {
             uint8_t *buf;
             size_t   size;
             int      writable;
+            /* buf is a kalloc block freed on close */
+            int      owned;
         } ram;
+        /* FD_STDIN, FD_STDOUT or FD_STDERR */
+        int stream;
     };
 };
 
@@ -36,6 +45,12 @@ void fd_init(fat_fs_t *root_fs)
 {
     fd_root_fs = root_fs;
     memset(fd_table, 0, sizeof(fd_table));
+    /* Owned by the kernel, so fd_close_owned never closes them */
+    for (int fd = 0; fd < FD_STD_NUM; fd++) {
+        fd_table[fd].used   = 1;
+        fd_table[fd].type   = FD_TYPE_CONSOLE;
+        fd_table[fd].stream = fd;
+    }
 }
 
 static struct fd_entry *fd_get(int fd)
@@ -46,13 +61,43 @@ static struct fd_entry *fd_get(int fd)
     return &fd_table[fd];
 }
 
+/* Claims a free slot owned by the running process, path is copied (nullable) */
+static int fd_alloc(const char *path)
+{
+    int fd;
+
+    for (fd = FD_STD_NUM; fd < FD_MAX && fd_table[fd].used; fd++);
+    if (fd == FD_MAX)
+        return FD_TOO_MANY;
+
+    memset(&fd_table[fd], 0, sizeof(fd_table[fd]));
+    if (path != NULL) {
+        fd_table[fd].path = strdup(path);
+        if (fd_table[fd].path == NULL)
+            return FD_IO_ERROR;
+    }
+    fd_table[fd].used  = 1;
+    fd_table[fd].owner = process_depth();
+
+    return fd;
+}
+
+static void fd_release(struct fd_entry *entry)
+{
+    if (entry->type == FD_TYPE_RAM && entry->ram.owned)
+        kfree(entry->ram.buf);
+    if (entry->path != NULL)
+        kfree(entry->path);
+    memset(entry, 0, sizeof(*entry));
+}
+
 fd_status_t vfd_register(const char *path, void *buf, size_t size, int writable)
 {
     int i;
 
     if (path == NULL || *path != '/' || buf == NULL)
         return FD_INVALID;
-    if (strlen(path) >= VFD_PATH_MAX)
+    if (strlen(path) >= VFD_PATH_MAX || procfs_match(path))
         return FD_INVALID;
 
     for (i = 0; i < VFD_MAX; i++)
@@ -96,42 +141,92 @@ fd_status_t vfd_unregister(const char *path)
 
 int fd_open(char *path)
 {
+    file_t *file;
     int fd, i;
 
     if (path == NULL || *path != '/')
         return FD_INVALID;
 
-    for (fd = 0; fd < FD_MAX && fd_table[fd].used; fd++);
-    if (fd == FD_MAX)
-        return FD_TOO_MANY;
+    if (procfs_match(path))
+        return procfs_open(path);
 
     for (i = 0; i < VFD_MAX; i++) {
         if (!vfd_table[i].used || strcmp(vfd_table[i].path, path) != 0)
             continue;
+        fd = fd_alloc(path);
+        if (fd < 0)
+            return fd;
         fd_table[fd].type         = FD_TYPE_RAM;
         fd_table[fd].ram.buf      = vfd_table[i].buf;
         fd_table[fd].ram.size     = vfd_table[i].size;
         fd_table[fd].ram.writable = vfd_table[i].writable;
-        fd_table[fd].used         = 1;
-        fd_table[fd].dirty        = 0;
-        fd_table[fd].owner        = process_depth();
-        fd_table[fd].pos          = 0;
         return fd;
     }
 
     if (fd_root_fs == NULL)
         return FD_INVALID;
 
-    fd_table[fd].file = file_open_path(fd_root_fs, path);
-    if (fd_table[fd].file == NULL)
+    file = file_open_path(fd_root_fs, path);
+    if (file == NULL)
         return FD_NOT_FOUND;
-    fd_table[fd].type  = FD_TYPE_FAT32;
-    fd_table[fd].used  = 1;
-    fd_table[fd].dirty = 0;
-    fd_table[fd].owner = process_depth();
-    fd_table[fd].pos   = 0;
+    fd = fd_alloc(path);
+    if (fd < 0) {
+        file_close(fd_root_fs, file);
+        return fd;
+    }
+    fd_table[fd].type = FD_TYPE_FAT32;
+    fd_table[fd].file = file;
 
     return fd;
+}
+
+int fd_open_buffer(const char *path, void *buffer, size_t size)
+{
+    int fd;
+
+    fd = fd_alloc(path);
+    if (fd < 0) {
+        kfree(buffer);
+        return fd;
+    }
+    fd_table[fd].type      = FD_TYPE_RAM;
+    fd_table[fd].ram.buf   = buffer;
+    fd_table[fd].ram.size  = size;
+    fd_table[fd].ram.owned = 1;
+
+    return fd;
+}
+
+int fd_reopen(int fd)
+{
+    struct fd_entry *entry;
+    int new_fd;
+
+    entry = fd_get(fd);
+    if (entry == NULL)
+        return FD_INVALID;
+
+    if (entry->type != FD_TYPE_CONSOLE)
+        return entry->path != NULL ? fd_open(entry->path) : FD_INVALID;
+
+    new_fd = fd_alloc(NULL);
+    if (new_fd < 0)
+        return new_fd;
+    fd_table[new_fd].type   = FD_TYPE_CONSOLE;
+    fd_table[new_fd].stream = entry->stream;
+
+    return new_fd;
+}
+
+int fd_owner(int fd)
+{
+    struct fd_entry *entry;
+
+    entry = fd_get(fd);
+    if (entry == NULL)
+        return FD_INVALID;
+
+    return entry->owner;
 }
 
 fd_status_t fd_close(int fd)
@@ -142,14 +237,16 @@ fd_status_t fd_close(int fd)
     entry = fd_get(fd);
     if (entry == NULL)
         return FD_INVALID;
+    /* The table is shared: closing a standard stream would close it for every process */
+    if (fd < FD_STD_NUM)
+        return FD_BUSY;
 
     if (entry->type == FD_TYPE_FAT32) {
         if (entry->dirty && file_sync(fd_root_fs, entry->file))
             status = FD_IO_ERROR;
         file_close(fd_root_fs, entry->file);
-        entry->file = NULL;
     }
-    entry->used = 0;
+    fd_release(entry);
 
     return status;
 }
@@ -163,6 +260,9 @@ int fd_read(int fd, void *buffer, size_t size)
     entry = fd_get(fd);
     if (entry == NULL || buffer == NULL)
         return FD_INVALID;
+
+    if (entry->type == FD_TYPE_CONSOLE)
+        return entry->stream == FD_STDIN ? console_read(buffer, size) : FD_INVALID;
 
     if (entry->type == FD_TYPE_RAM) {
         avail   = (entry->pos < entry->ram.size) ? entry->ram.size - entry->pos : 0;
@@ -188,6 +288,12 @@ int fd_write(int fd, void *buffer, size_t size)
         return FD_INVALID;
     if (size == 0)
         return 0;
+
+    if (entry->type == FD_TYPE_CONSOLE) {
+        if (entry->stream == FD_STDIN)
+            return FD_INVALID;
+        return console_write(entry->stream == FD_STDERR ? RED : STD_COLOR, buffer, size);
+    }
 
     if (entry->type == FD_TYPE_RAM) {
         if (!entry->ram.writable)
@@ -220,7 +326,7 @@ int fd_seek(int fd, int offset, int whence)
     int pos;
 
     entry = fd_get(fd);
-    if (entry == NULL)
+    if (entry == NULL || entry->type == FD_TYPE_CONSOLE)
         return FD_INVALID;
 
     file_size = (entry->type == FD_TYPE_FAT32)
@@ -290,7 +396,7 @@ fd_status_t fd_create(char *path)
     fd_status_t status = FD_OK;
     int i;
 
-    if (path == NULL || *path != '/')
+    if (path == NULL || *path != '/' || procfs_match(path))
         return FD_INVALID;
 
     for (i = 0; i < VFD_MAX; i++)
@@ -331,7 +437,7 @@ fd_status_t fd_remove(char *path)
     file_t *open;
     int i;
 
-    if (path == NULL || *path != '/')
+    if (path == NULL || *path != '/' || procfs_match(path))
         return FD_INVALID;
 
     for (i = 0; i < VFD_MAX; i++)
@@ -366,7 +472,7 @@ fd_status_t fd_remove(char *path)
 
 void fd_close_owned(int owner)
 {
-    for (int fd = 0; fd < FD_MAX; fd++)
+    for (int fd = FD_STD_NUM; fd < FD_MAX; fd++)
         if (fd_table[fd].used && fd_table[fd].owner >= owner)
             fd_close(fd);
 }
@@ -397,7 +503,11 @@ int fd_readdir(char *path, int index, fd_dirent_t *out)
     size_t i;
     entry_t *e;
 
-    if (fd_root_fs == NULL || path == NULL || out == NULL || index < 0)
+    if (path == NULL || out == NULL || index < 0)
+        return FD_INVALID;
+    if (procfs_match(path))
+        return procfs_readdir(path, index, out);
+    if (fd_root_fs == NULL)
         return FD_INVALID;
 
     dir = dir_open_path(fd_root_fs, path);

@@ -185,6 +185,12 @@ static force_inline void puts_color_syscall(uint8_t color, char *s)
 #define FILE_BUSY           -5
 #define FILE_IO_ERROR       -6
 
+/* Standard streams, always open on the console (keyboard and screen, stderr in red).
+   Reading stdin returns a whole line, echoed while typed. They can't be closed. */
+#define STDIN_FILENO        0
+#define STDOUT_FILENO       1
+#define STDERR_FILENO       2
+
 /* seek_syscall whence */
 #define SEEK_SET            0
 #define SEEK_CUR            1

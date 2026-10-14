@@ -8,11 +8,35 @@
 /* Limits on the arguments passed to process_spawn */
 #define PROC_MAX_ARGS       32
 #define PROC_MAX_ARGS_SIZE  1024
+/* Processes nest through exec on the kernel stack, this bounds the nesting depth */
+#define PROC_MAX            16
+#define PROC_NAME_LEN       16
+
+typedef enum {
+    /* The innermost process, the one executing */
+    PROC_STATE_RUNNING,
+    /* Blocked in exec until its child exits */
+    PROC_STATE_WAITING,
+} proc_state_t;
+
+/* Entry of the process table, exposed under /proc/<pid> */
 struct process {
-    uintptr_t vaddr;
-    elf_t *executable;
-    u32 stack_size;
-    u32 heap_size;
+    int pid;
+    /* 0 when started by the kernel */
+    int ppid;
+    /* Nesting depth, starts from 1: owner of the descriptors the process opens */
+    int depth;
+    proc_state_t state;
+    /* Basename of argv[0] */
+    char name[PROC_NAME_LEN];
+    int argc;
+    /* Kernel memory, valid while the process runs */
+    char **argv;
+    uintptr_t entry;
+    /* Page aligned virtual span of the image and its physical base */
+    uintptr_t vstart;
+    uintptr_t vend;
+    uintptr_t paddr;
 };
 
 typedef enum {
@@ -31,5 +55,11 @@ int process_exec(elf_t *elf, int argc, char **argv, int *exit_code);
 proc_status_t process_spawn(char *path, char **argv, int *exit_code);
 /* Nesting depth of the running process, 0 when called from the kernel */
 int process_depth(void);
+/* Process at nesting depth (1 to process_depth()), NULL if there is none */
+struct process *process_at(int depth);
+/* The running process, NULL when called from the kernel */
+struct process *process_current(void);
+/* NULL if no live process has that pid */
+struct process *process_get(int pid);
 
 #endif

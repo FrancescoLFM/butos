@@ -39,7 +39,7 @@ all:
 	$(call color_text,91,"[MAKE] Creazione della partizione FAT32")
 	rm -f $(PART)
 	mkfs.fat -F 32 --mbr=y -C $(PART) 1000
-	mmd -i $(PART) ::/usr ::/usr/bin ::/bin ::/etc ::/tmp
+	mmd -i $(PART) ::/usr ::/usr/bin ::/bin ::/etc ::/tmp ::/proc
 	$(call color_text,91,"[MAKE] Compilazione degli eseguibili di base")
 	$(MAKE) -C $(PROGDIR)
 	$(call color_text,91,"[MAKE] Copia degli eseguibili nella partizione")

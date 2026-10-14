@@ -89,6 +89,8 @@ struct keyboard std_keyboard = {
 
 struct keyboard *current_keyboard = &std_keyboard;
 trigger_t extended = 0;
+/* Either control key is held: letters become control characters (Ctrl+D is 0x04) */
+static int control_held = 0;
 
 int select_keyboard(struct keyboard *keyboard)
 {
@@ -180,11 +182,15 @@ void keyboard_handler(struct registers_t *regs)
         (ext && IN_ARRAY(UNRELEASED(scan), EXTENDED_CTRL_SCANCODES))) {
         /* special keys */
     
+        if (UNRELEASED(scan) == LEFT_CONTROL_KEY || (ext && UNRELEASED(scan) == RIGHT_CONTROL_KEY))
+            control_held = !(scan & RELEASED_KEY);
         keyboard_change_table(current_keyboard, scan, ext);
 
     } else {  /* normal keys */
 
         chr = keyboard_read_character(current_keyboard, scan);
+        if (control_held && ((chr >= 'a' && chr <= 'z') || (chr >= 'A' && chr <= 'Z')))
+            chr &= 0x1F;
         if (chr) {
             queue_enqueue(input_buffer, chr);
         }

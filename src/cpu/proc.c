@@ -23,6 +23,9 @@ static int proc_initialized = 0;
 static fat_fs_t *proc_root_fs;
 /* Number of processes currently running, nested through exec */
 static int proc_depth = 0;
+/* Live processes, indexed by depth - 1: the last one is the running process */
+static struct process proc_table[PROC_MAX];
+static int proc_next_pid = 1;
 
 static force_inline uintptr_t get_cr3()
 {
@@ -102,6 +105,45 @@ static int process_call(uintptr_t entry, int argc, char **argv)
     return ret;
 }
 
+/* Registers the process about to run as the innermost one, the caller must check PROC_MAX */
+static void process_table_push(int argc, char **argv, uintptr_t entry,
+                               uintptr_t vstart, uintptr_t vend, uintptr_t paddr)
+{
+    struct process *parent = process_current();
+    struct process *proc = &proc_table[proc_depth];
+    const char *name = (argc > 0 && argv[0] != NULL) ? argv[0] : "?";
+    const char *slash = strrchr(name, '/');
+
+    if (slash != NULL && slash[1] != '\0')
+        name = slash + 1;
+    memset(proc, 0, sizeof(*proc));
+    proc->pid = proc_next_pid++;
+    proc->ppid = parent != NULL ? parent->pid : 0;
+    proc->depth = proc_depth + 1;
+    proc->state = PROC_STATE_RUNNING;
+    strncpy(proc->name, name, PROC_NAME_LEN - 1);
+    proc->argc = argc;
+    proc->argv = argv;
+    proc->entry = entry;
+    proc->vstart = vstart;
+    proc->vend = vend;
+    proc->paddr = paddr;
+    if (parent != NULL)
+        parent->state = PROC_STATE_WAITING;
+    proc_depth++;
+}
+
+static void process_table_pop(void)
+{
+    struct process *parent;
+
+    proc_depth--;
+    memset(&proc_table[proc_depth], 0, sizeof(proc_table[proc_depth]));
+    parent = process_current();
+    if (parent != NULL)
+        parent->state = PROC_STATE_RUNNING;
+}
+
 int process_exec(elf_t *elf, int argc, char **argv, int *exit_code)
 {
     uint32_t *kernel_dir;
@@ -111,7 +153,7 @@ int process_exec(elf_t *elf, int argc, char **argv, int *exit_code)
     uintptr_t entry = elf->header.p_entry_offset;
     int status = EXIT_FAILURE;
 
-    if (!proc_initialized || process_image_span(elf, &vstart, &vend))
+    if (!proc_initialized || proc_depth == PROC_MAX || process_image_span(elf, &vstart, &vend))
         return EXIT_FAILURE;
     if (entry < vstart || entry >= vend)
         return EXIT_FAILURE;
@@ -137,11 +179,11 @@ int process_exec(elf_t *elf, int argc, char **argv, int *exit_code)
             if (p_header_memload(&elf->p_headers[i], elf))
                 goto restore_dir;
     }
-    proc_depth++;
+    process_table_push(argc, argv, entry, vstart, vend, paddr);
     *exit_code = process_call(entry, argc, argv);
     /* Files the process left open */
     fd_close_owned(proc_depth);
-    proc_depth--;
+    process_table_pop();
     status = EXIT_SUCCESS;
 
 restore_dir:
@@ -158,6 +200,28 @@ free_image:
 int process_depth(void)
 {
     return proc_depth;
+}
+
+struct process *process_at(int depth)
+{
+    if (depth < 1 || depth > proc_depth)
+        return NULL;
+
+    return &proc_table[depth - 1];
+}
+
+struct process *process_current(void)
+{
+    return process_at(proc_depth);
+}
+
+struct process *process_get(int pid)
+{
+    for (int i = 0; i < proc_depth; i++)
+        if (proc_table[i].pid == pid)
+            return &proc_table[i];
+
+    return NULL;
 }
 
 /* 
