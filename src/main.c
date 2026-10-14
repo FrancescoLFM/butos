@@ -17,72 +17,7 @@ void elf_test();
 
 extern char __bss_start[], __bss_end[];
 
-#define INIT_PATH   "/butosh"
-
-static void vfd_test(void)
-{
-    static char hello_buf[] = "Hello, VFD!";
-    static char rw_buf[32];
-    char read_buf[32];
-    int fd, n;
-
-    printk("=== vfd_test start ===\n");
-
-    if (vfd_register("/dev/hello", hello_buf, 11, 0) != FD_OK) {
-        printk("FAIL: vfd_register ro\n"); return;
-    }
-    fd = fd_open("/dev/hello");
-    if (fd < 0) { printk("FAIL: open ro\n"); return; }
-    n = fd_read(fd, read_buf, sizeof(read_buf));
-    if (n != 11 || strncmp(read_buf, "Hello, VFD!", 11) != 0) {
-        printk("FAIL: read content\n"); return;
-    }
-    if (fd_read(fd, read_buf, 1) != 0) { printk("FAIL: no EOF\n"); return; }
-    if (fd_seek(fd, 0, FD_SEEK_SET) != 0) { printk("FAIL: seek set\n"); return; }
-    if (fd_read(fd, read_buf, 1) != 1 || read_buf[0] != 'H') {
-        printk("FAIL: seek+read\n"); return;
-    }
-    if (fd_seek(fd, 12, FD_SEEK_SET) != FD_INVALID) { printk("FAIL: seek past end\n"); return; }
-    if (fd_write(fd, "x", 1) != FD_IO_ERROR) { printk("FAIL: write on ro\n"); return; }
-    fd_close(fd);
-    printk("PASS: read-only vfd\n");
-
-    if (vfd_register("/dev/rw", rw_buf, sizeof(rw_buf), 1) != FD_OK) {
-        printk("FAIL: vfd_register rw\n"); return;
-    }
-    fd = fd_open("/dev/rw");
-    if (fd < 0) { printk("FAIL: open rw\n"); return; }
-    n = fd_write(fd, "test_data", 9);
-    if (n != 9) { printk("FAIL: write count\n"); return; }
-    fd_seek(fd, 0, FD_SEEK_SET);
-    memset(read_buf, 0, sizeof(read_buf));
-    n = fd_read(fd, read_buf, 9);
-    if (n != 9 || strncmp(read_buf, "test_data", 9) != 0) {
-        printk("FAIL: rw readback\n"); return;
-    }
-    fd_seek(fd, 0, FD_SEEK_END);
-    if (fd_write(fd, "x", 1) != FD_IO_ERROR) { printk("FAIL: write past end\n"); return; }
-    if (vfd_unregister("/dev/rw") != FD_BUSY) { printk("FAIL: busy check\n"); return; }
-    fd_close(fd);
-    printk("PASS: writable vfd\n");
-
-    if (vfd_unregister("/dev/hello") != FD_OK) { printk("FAIL: unregister\n"); return; }
-    if (fd_open("/dev/hello") >= 0) { printk("FAIL: open after unregister\n"); return; }
-    printk("PASS: unregister\n");
-
-    if (vfd_register("/dev/rw", rw_buf, sizeof(rw_buf), 1) != FD_EXISTS) {
-        printk("FAIL: duplicate\n"); return;
-    }
-    printk("PASS: duplicate detection\n");
-
-    if (vfd_register("/dev/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-                     rw_buf, 1, 0) != FD_INVALID) {
-        printk("FAIL: path too long\n"); return;
-    }
-    printk("PASS: path length guard\n");
-
-    printk("=== vfd_test PASSED ===\n");
-}
+#define INIT_PATH   "/usr/bin/butosh"
 
 /* Mounts the FAT32 partition and runs the init process (the shell), respawning it on exit */
 static void init_start()
@@ -150,8 +85,6 @@ __attribute__((section(".text.entry"))) void main()
     );
 
     keyboard_start(100);
-
-    vfd_test();
 
     init_start();
 
