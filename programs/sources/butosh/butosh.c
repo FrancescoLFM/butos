@@ -7,7 +7,7 @@
 #include "ulib.h"
 
 #define BUFFER_SIZE     128
-#define PATH_SIZE       (BUFFER_SIZE + 2)
+#define PATH_SIZE       (BUFFER_SIZE + 16)
 #define MAX_ARGS        16
 #define VAR_SIZE        50
 #define NO_BUILTIN      -1
@@ -231,27 +231,42 @@ static int builtin_program_execute(struct command *cmd)
     return NO_BUILTIN;
 }
 
-/* Programs are looked up in the root of the FAT32 partition unless a path is given */
+/* Programs are searched in /usr/bin, /bin, / unless an absolute path is given */
 static int program_execute(struct command *cmd)
 {
+    static const char * const search_dirs[] = {
+        "/usr/bin/", "/bin/", "/", NULL
+    };
     char path[PATH_SIZE];
-    /* Program name, arguments and the NULL terminator */
     char *argv[MAX_ARGS + 2];
-    int exit_code;
+    int exit_code = 0;
+    int status = EXEC_NOT_FOUND;
     size_t len = strlen(cmd->name);
-
-    if (cmd->name[0] == '/') {
-        memcpy(path, cmd->name, len + 1);
-    } else {
-        path[0] = '/';
-        memcpy(path + 1, cmd->name, len + 1);
-    }
+    int i;
 
     argv[0] = cmd->name;
     memcpy(&argv[1], cmd->args, cmd->argc * sizeof(char *));
     argv[cmd->argc + 1] = NULL;
 
-    switch (exec_syscall(path, argv, &exit_code)) {
+    if (cmd->name[0] == '/') {
+        if (len + 1 > PATH_SIZE) {
+            puts_syscall("Path too long\n");
+            return EXIT_FAILURE;
+        }
+        memcpy(path, cmd->name, len + 1);
+        status = exec_syscall(path, argv, &exit_code);
+    } else {
+        for (i = 0; search_dirs[i] != NULL && status == EXEC_NOT_FOUND; i++) {
+            size_t prefix_len = strlen(search_dirs[i]);
+            if (prefix_len + len + 1 > PATH_SIZE)
+                continue;
+            memcpy(path, search_dirs[i], prefix_len);
+            memcpy(path + prefix_len, cmd->name, len + 1);
+            status = exec_syscall(path, argv, &exit_code);
+        }
+    }
+
+    switch (status) {
     case EXEC_OK:
         if (exit_code != EXIT_SUCCESS)
             printf_syscall("\n%s exited with code %d\n", cmd->name, exit_code);
@@ -326,6 +341,7 @@ static void load_default_var()
     var_set("green", "2", 1);
     var_set("red", "4", 1);
     var_set("white", "7", 1);
+    var_set("PWD", "/", 0);
 }
 
 int main()
