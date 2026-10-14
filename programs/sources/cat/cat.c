@@ -10,9 +10,15 @@ static void error(char *msg)
 }
 
 int main(int argc, char **argv) {
+  char buffer[512];
+  int n;
+
   if (argc < 2) {
-    error("Error: No file specified. Exiting.\n");
-    return 1;
+    while ((n = read_syscall(STDIN_FILENO, buffer, sizeof(buffer))) > 0) {
+      write_syscall(STDOUT_FILENO, buffer, n);
+    }
+    
+    return 0;
   }
 
   int fd = open_syscall(argv[1]);
@@ -20,8 +26,6 @@ int main(int argc, char **argv) {
     error("cat: can't open the file\n");
     return 1;
   }
-  char buffer[512];
-  int n;
 
   while ((n = read_syscall(fd, buffer, sizeof(buffer))) > 0)
     write_syscall(STDOUT_FILENO, buffer, n);
