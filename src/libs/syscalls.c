@@ -56,6 +56,11 @@ void kfree_handler(struct registers_t *regs)
     kfree((void *) regs->ebx);
 }
 
+void krealloc_handler(struct registers_t *regs)
+{
+    regs->eax = (uint32_t) krealloc((void *) regs->ebx, regs->ecx);
+}
+
 void exec_handler(struct registers_t *regs)
 {
     char *path = (char *) regs->ebx;

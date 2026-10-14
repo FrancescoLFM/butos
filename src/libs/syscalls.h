@@ -4,7 +4,7 @@
 #include <cpu/idt.h>
 #include <libs/print.h>
 
-#define SYSCALLS_NUM 17
+#define SYSCALLS_NUM 18
 
 void putc_handler(struct registers_t *regs);
 void puts_handler(struct registers_t *regs);
@@ -23,13 +23,14 @@ void seek_handler(struct registers_t *regs);
 void create_handler(struct registers_t *regs);
 void remove_handler(struct registers_t *regs);
 void readdir_handler(struct registers_t *regs);
+void krealloc_handler(struct registers_t *regs);
 
 static void __attribute__((unused)) (*syscall_handlers[SYSCALLS_NUM])(struct registers_t *) = {putc_handler, puts_handler, printf_handler,
                                                                                                clear_handler, getchar_handler, kalloc_handler,
                                                                                                kfree_handler, exec_handler, puts_color_handler,
                                                                                                open_handler, close_handler, read_handler,
                                                                                                write_handler, seek_handler, create_handler,
-                                                                                               remove_handler, readdir_handler};
+                                                                                               remove_handler, readdir_handler, krealloc_handler};
 
 /* 
     ? Butos syscalls collection
@@ -156,6 +157,24 @@ static force_inline void kfree_syscall(void *buff)
         : "r"((uintptr_t)buff)
         : "eax", "ebx"
     );
+}
+
+///@brief Resize heap kernel memory (NULL ptr = alloc, size 0 = free)
+///@param EAX: Krealloc syscall num (17), on return the new pointer (NULL on failure, old block kept)
+///@param EBX: Pointer to buffer
+///@param ECX: New size
+static force_inline void *krealloc_syscall(void *buff, size_t size)
+{
+    void *ret;
+
+    __asm__ __volatile__ (
+        "int $0x80 \n"
+        : "=a"(ret)
+        : "a"(17), "b"((uintptr_t)buff), "c"(size)
+        : "memory"
+    );
+
+    return ret;
 }
 
 /* PROCESS SYSCALLS */

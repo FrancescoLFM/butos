@@ -164,6 +164,12 @@ int allocator_find_in_registry(allocator_t *a, const uintptr_t ptr)
     return -1;
 }
 
+static void raise_free_error()
+{
+    puts_c(RED, "[FATAL ERROR] INVALID FREE\n");
+    stop();
+}
+
 /**
  * Controlla se puoi espandere il blocco associato a ptr in loco.
  * Se non interseca con il blocco successivo cambia solo la size del blocco
@@ -174,42 +180,45 @@ int allocator_find_in_registry(allocator_t *a, const uintptr_t ptr)
 uintptr_t allocator_realloc(allocator_t *a, uintptr_t ptr, size_t size)
 {
     struct memspace m;
+    size_t old_size;
     int index;
-    int can_enlarge = 0;
+    int can_enlarge;
+
+    if (!ptr)
+        return allocator_alloc(a, size);
 
     index = allocator_find_in_registry(a, ptr);
     if (index < 0)
-        return allocator_alloc(a, size);
-    
+        raise_free_error();
+
+    if (size == 0) {
+        allocator_unregister(a, index);
+        return 0;
+    }
+
     m.start = ptr;
     m.size = size;
 
-    can_enlarge = 
-        /* sei alla fine e hai molto spazio dopo */
-        ((size_t)index == a->size-1 && memspace_enclosed(&a->pool, &m)) ||
-        /* sei in mezzo ma non ti sovrapponi con il successivo */
-        !memspace_overlap(&m, &a->registry[index+1]);
-    
+    /* deve stare nell'heap e non sovrapporsi con il blocco successivo */
+    can_enlarge = memspace_enclosed(&a->pool, &m) &&
+        ((size_t)index == a->size-1 || !memspace_overlap(&m, &a->registry[index+1]));
+
     if (can_enlarge) {
         a->registry[index].size = size;
         return m.start;
     }
 
+    /* allocator_alloc riordina il registro: index non vale piu' dopo */
+    old_size = a->registry[index].size;
     m.start = allocator_alloc(a, size);
     if (!m.start)
         return 0;
-    
+
     // here the MIN handles shrinking and enlargement
-    memcpy((void *) m.start, (void *) ptr, MIN(a->registry[index].size, size));
+    memcpy((void *) m.start, (void *) ptr, MIN(old_size, size));
     allocator_free(a, ptr);
 
     return m.start;
-}
-
-static void raise_free_error()
-{
-    puts_c(RED, "[FATAL ERROR] INVALID FREE\n");
-    stop();
 }
 
 void allocator_free(allocator_t *a, uintptr_t ptr)

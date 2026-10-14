@@ -127,6 +127,24 @@ static force_inline void kfree_syscall(void *buff)
     );
 }
 
+///@brief Resize heap kernel memory (NULL ptr = alloc, size 0 = free)
+///@param EAX: Krealloc syscall num (17), on return the new pointer (NULL on failure, old block kept)
+///@param EBX: Pointer to buffer
+///@param ECX: New size
+static force_inline void *krealloc_syscall(void *buff, size_t size)
+{
+    void *ret;
+
+    __asm__ __volatile__ (
+        "int $0x80 \n"
+        : "=a"(ret)
+        : "a"(17), "b"((uintptr_t)buff), "c"(size)
+        : "memory"
+    );
+
+    return ret;
+}
+
 /* PROCESS SYSCALLS */
 
 /* exec_syscall return values */

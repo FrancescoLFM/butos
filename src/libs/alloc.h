@@ -13,7 +13,7 @@ void *kalloc(size_t size);
 void *aligned_kalloc(size_t alignment, size_t size);
 void kfree(void *ptr);
 void *kcalloc(size_t nmemb, size_t size);
-void *krealloc(void *ptr, size_t array);
+void *krealloc(void *ptr, size_t size);
 void kalloc_print();
 
 #endif
