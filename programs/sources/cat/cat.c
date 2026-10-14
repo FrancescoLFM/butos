@@ -11,15 +11,13 @@ int main(int argc, char **argv) {
     return 1;
   }
   char buffer[512];
-  int eof = 0;
+  int n;
 
-  while(!eof) {
-    eof = read_syscall(fd, buffer, 512);
-    for (int i = 0; i < 512; i++) {
+  while ((n = read_syscall(fd, buffer, sizeof(buffer))) > 0) {
+    for (int i = 0; i < n; i++)
       putc_syscall(buffer[i]);
-    }
   }
 
-
+  close_syscall(fd);
   return 0;
 }
