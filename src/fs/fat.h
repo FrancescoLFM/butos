@@ -202,6 +202,7 @@ uint32_t first_free_cluster_read(fat_fs_t *fs);
 uint32_t fat_table_alloc_cluster(fat_fs_t *fs, uint32_t content);
 uint32_t cluster_chain_get_len(fat_fs_t *fs, uint32_t start);
 uint32_t cluster_chain_read(fat_fs_t *fs, uint32_t curr, uint32_t index);
+void cluster_chain_free(fat_fs_t *fs, uint32_t start);
 
 // src/file.c
 void rstrip_path(char *path);
@@ -226,5 +227,8 @@ uint8_t dir_entry_create(fat_fs_t *fs, dir_t *dir, entry_t *entry);
 void dir_entry_override(fat_fs_t *fs, dir_t *dir, char *short_name, entry_t *entry);
 dir_t *dir_open_path(fat_fs_t *fs, char *path);
 void dir_close(fat_fs_t *fs, dir_t *dir);
+uint8_t dir_create(fat_fs_t *fs, char *path, char *dirname);
+int dir_is_empty(dir_t *dir);
+uint8_t dir_delete(fat_fs_t *fs, char *path);
 
 #endif

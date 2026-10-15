@@ -270,7 +270,6 @@ uint8_t file_delete(fat_fs_t *fs, char *path)
     dir_t *dir;
     file_t *file;
     entry_t *dummy_entry;
-    uint32_t cluster, next;
 
     file = file_open_path(fs, path);
     if (file == NULL)
@@ -295,14 +294,7 @@ uint8_t file_delete(fat_fs_t *fs, char *path)
     dir_scan(fs, dir);
     dir_entry_override(fs, dir, file->entry->short_name, dummy_entry);
 
-    /* Free the whole cluster chain */
-    for (cluster = file->cluster; cluster >= 2 && cluster < EOC1; cluster = next) {
-        next = fat_table_read(fs, cluster);
-        fat_table_write(fs, cluster, 0);
-        fs->info.free_cluster_count++;
-        if (cluster < fs->info.free_cluster)
-            fs->info.free_cluster = cluster;
-    }
+    cluster_chain_free(fs, file->cluster);
 
     file_close(fs, file);
     dir_close(fs, dir);

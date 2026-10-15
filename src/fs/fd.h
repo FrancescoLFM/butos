@@ -37,6 +37,7 @@ typedef enum {
     FD_TOO_MANY = -4,
     FD_BUSY = -5,
     FD_IO_ERROR = -6,
+    FD_NOT_EMPTY = -7,
 } fd_status_t;
 
 void fd_init(fat_fs_t *root_fs);
@@ -50,6 +51,11 @@ int fd_write(int fd, void *buffer, size_t size);
 int fd_seek(int fd, int offset, int whence);
 fd_status_t fd_create(char *path);
 fd_status_t fd_remove(char *path);
+/* Creates an empty directory, the name must be 8.3 */
+fd_status_t fd_mkdir(char *path);
+/* Removes an empty directory (FD_NOT_EMPTY otherwise), FD_INVALID for files and the root,
+   FD_BUSY if it's the working directory of a live process */
+fd_status_t fd_rmdir(char *path);
 /* Closes the descriptors opened at process nesting depth owner or deeper */
 void fd_close_owned(int owner);
 

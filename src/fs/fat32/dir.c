@@ -164,15 +164,12 @@ void dir_scan(fat_fs_t *fs, dir_t *dir)
 
 int strcmp_insensitive(char *a, char *b)
 {
-    size_t i = 0;
+    while (*a && TOLOWER(*a) == TOLOWER(*b)) {
+        a++;
+        b++;
+    }
 
-    do {
-        if (!a[i] || !b[i])
-            return a[i]-b[i];
-        i++;
-    } while (TOLOWER(a[i]) == TOLOWER(b[i]));
-
-    return a[i] - b[i];
+    return TOLOWER(*a) - TOLOWER(*b);
 }
 
 int compare_short_name(char* name, char* str) {
@@ -299,4 +296,119 @@ void dir_close(fat_fs_t *fs, dir_t *dir)
     entry_array_destroy(dir->entries, dir->num_entries);
     file_close(fs, dir->ident);
     kfree(dir);
+}
+/* Fills a "." or ".." entry pointing to cluster (0 means the root directory) */
+static void dir_dot_entry(entry_t *entry, char *name, uint32_t cluster)
+{
+    memset(entry->short_name, ' ', SHORT_NAME_LEN);
+    memcpy(entry->short_name, name, strlen(name));
+    entry->attr = DIR_ATTR;
+    entry->low_cluster = cluster & 0xFFFF;
+    entry->high_cluster = cluster >> 16;
+}
+
+/* Creates the empty directory dirname (8.3) inside the directory at path */
+uint8_t dir_create(fat_fs_t *fs, char *path, char *dirname)
+{
+    dir_t *parent;
+    entry_t *entry;
+    uint8_t *buffer;
+    uint32_t cluster, parent_cluster;
+    uint8_t status;
+
+    parent = dir_open_path(fs, path);
+    if (parent == NULL)
+        return EXIT_FAILURE;
+    dir_scan(fs, parent);
+    if ((entry = dir_search(parent, dirname)) != NULL) {
+        kfree(entry);
+        dir_close(fs, parent);
+        return EXIT_FAILURE;
+    }
+
+    buffer = kcalloc(1, fs->volume->cluster_sizeb);
+    entry = file_entry_create(dirname, 0);
+    cluster = fat_table_alloc_cluster(fs, EOC1);
+    if (buffer == NULL || entry == NULL || cluster == CLUSTER_ALLOC_ERR) {
+        status = EXIT_FAILURE;
+        goto out;
+    }
+
+    /* ".." of a directory in the root points to cluster 0 */
+    parent_cluster = parent->ident->cluster == fs->info.root_cluster ? 0 : parent->ident->cluster;
+    dir_dot_entry((entry_t *) buffer, ".", cluster);
+    dir_dot_entry((entry_t *) buffer + 1, "..", parent_cluster);
+    status = write_cluster(fs, cluster, buffer);
+
+    if (status == EXIT_SUCCESS) {
+        entry->attr = DIR_ATTR;
+        entry->low_cluster = cluster & 0xFFFF;
+        entry->high_cluster = cluster >> 16;
+        status = dir_entry_create(fs, parent, entry);
+    }
+
+out:
+    if (status && cluster != CLUSTER_ALLOC_ERR)
+        cluster_chain_free(fs, cluster);
+    if (buffer != NULL)
+        kfree(buffer);
+    if (entry != NULL)
+        kfree(entry);
+    dir_close(fs, parent);
+    fat_fs_sync(fs);
+
+    return status;
+}
+
+/* Whether a scanned directory has nothing but "." and ".." */
+int dir_is_empty(dir_t *dir)
+{
+    for (size_t i = 0; i < dir->num_entries; i++)
+        if (dir->entries[i] != NULL && dir->entries[i]->short_name[0] != '.')
+            return 0;
+
+    return 1;
+}
+
+/* Deletes the empty directory at path (not the root) */
+uint8_t dir_delete(fat_fs_t *fs, char *path)
+{
+    dir_t *dir, *parent;
+    entry_t *dummy_entry;
+    char *parent_path;
+    uint8_t status = EXIT_FAILURE;
+
+    if (path[0] != '/' || path[1] == '\0')
+        return EXIT_FAILURE;
+    dir = dir_open_path(fs, path);
+    if (dir == NULL)
+        return EXIT_FAILURE;
+    dir_scan(fs, dir);
+
+    parent_path = strdup(path);
+    dummy_entry = kcalloc(1, sizeof(*dummy_entry));
+    if (!dir_is_empty(dir) || parent_path == NULL || dummy_entry == NULL)
+        goto out;
+    rstrip_path(parent_path);
+    parent = dir_open_path(fs, parent_path);
+    if (parent == NULL)
+        goto out;
+
+    /* Deleted entries are marked by their first byte */
+    dummy_entry->short_name[0] = INVALID_ENTRY;
+    dir_scan(fs, parent);
+    dir_entry_override(fs, parent, dir->ident->entry->short_name, dummy_entry);
+    dir_close(fs, parent);
+    cluster_chain_free(fs, dir->ident->cluster);
+    fat_fs_sync(fs);
+    status = EXIT_SUCCESS;
+
+out:
+    if (parent_path != NULL)
+        kfree(parent_path);
+    if (dummy_entry != NULL)
+        kfree(dummy_entry);
+    dir_close(fs, dir);
+
+    return status;
 }

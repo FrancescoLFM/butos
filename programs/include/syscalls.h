@@ -202,6 +202,7 @@ static force_inline void puts_color_syscall(uint8_t color, char *s)
 #define FILE_TOO_MANY       -4
 #define FILE_BUSY           -5
 #define FILE_IO_ERROR       -6
+#define FILE_NOT_EMPTY      -7
 
 /* Standard streams, always open on the console (keyboard and screen, stderr in red).
    Reading stdin returns a whole line, echoed while typed. They can't be closed. */
@@ -401,6 +402,98 @@ static force_inline int getcwd_syscall(char *buff, size_t size)
         "int $0x80 \n"
         : "=a"(ret)
         : "a"(19), "b"((uintptr_t)buff), "c"(size)
+        : "memory"
+    );
+
+    return ret;
+}
+
+///@brief Create an empty directory, the name must be 8.3
+///@param EAX: Mkdir syscall num (20), on return the status (FILE_EXISTS, FILE_NOT_FOUND if the parent is missing)
+///@param EBX: Directory path, absolute or relative
+static force_inline int mkdir_syscall(char *path)
+{
+    int ret;
+
+    __asm__ __volatile__ (
+        "int $0x80 \n"
+        : "=a"(ret)
+        : "a"(20), "b"((uintptr_t)path)
+        : "memory"
+    );
+
+    return ret;
+}
+
+///@brief Remove an empty directory
+///@param EAX: Rmdir syscall num (21), on return the status (FILE_NOT_EMPTY, FILE_INVALID for files and /,
+///            FILE_BUSY if it's the working directory of a running process)
+///@param EBX: Directory path, absolute or relative
+static force_inline int rmdir_syscall(char *path)
+{
+    int ret;
+
+    __asm__ __volatile__ (
+        "int $0x80 \n"
+        : "=a"(ret)
+        : "a"(21), "b"((uintptr_t)path)
+        : "memory"
+    );
+
+    return ret;
+}
+
+/* SYSTEM INFO SYSCALLS */
+
+#define UTS_LEN             32
+
+struct utsname {
+    char sysname[UTS_LEN];
+    char nodename[UTS_LEN];
+    char release[UTS_LEN];
+    char version[UTS_LEN];
+    char machine[UTS_LEN];
+};
+
+///@brief Get the kernel name, release, build and machine
+///@param EAX: Uname syscall num (22), on return the status
+///@param EBX: Pointer to struct utsname to fill
+static force_inline int uname_syscall(struct utsname *name)
+{
+    int ret;
+
+    __asm__ __volatile__ (
+        "int $0x80 \n"
+        : "=a"(ret)
+        : "a"(22), "b"((uintptr_t)name)
+        : "memory"
+    );
+
+    return ret;
+}
+
+struct blkinfo {
+    char         name[8];       /* "hda", "hda1"... */
+    char         model[40];     /* Empty for partitions */
+    char         mount[16];     /* Empty if not mounted */
+    unsigned int start;         /* First LBA */
+    unsigned int sectors;       /* 512 bytes sectors */
+    unsigned int part_type;     /* MBR partition type, 0 for the whole disk */
+    unsigned int bootable;
+};
+
+///@brief Read block device at index (0 is the boot disk, then its partitions)
+///@param EAX: Blkinfo syscall num (23), on return 1=found, 0=end, negative=error
+///@param EBX: Device index
+///@param ECX: Pointer to struct blkinfo to fill
+static force_inline int blkinfo_syscall(int index, struct blkinfo *info)
+{
+    int ret;
+
+    __asm__ __volatile__ (
+        "int $0x80 \n"
+        : "=a"(ret)
+        : "a"(23), "b"(index), "c"((uintptr_t)info)
         : "memory"
     );
 

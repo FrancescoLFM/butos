@@ -397,6 +397,33 @@ static int short_name_valid(char *name)
     return j > 0;
 }
 
+/* Splits "/dir/name" into a kalloc'd "/dir" ("" for the root) and "name", pointing into it */
+static char *fd_split(const char *path, char **name)
+{
+    char *dir_path = strdup(path);
+
+    if (dir_path == NULL)
+        return NULL;
+    *name = dir_path + strlen(dir_path);
+    while (**name != '/')
+        (*name)--;
+    *(*name)++ = '\0';
+
+    return dir_path;
+}
+
+/* Whether path (absolute, normalized) names a FAT32 directory, the root included */
+static int fd_is_dir(char *path)
+{
+    dir_t *dir = dir_open_path(fd_root_fs, path);
+
+    if (dir == NULL)
+        return 0;
+    dir_close(fd_root_fs, dir);
+
+    return 1;
+}
+
 fd_status_t fd_create(char *path)
 {
     char resolved[PATH_MAX];
@@ -425,14 +452,9 @@ fd_status_t fd_create(char *path)
         return FD_EXISTS;
     }
 
-    /* Split "/dir/name" into "/dir" and "name" */
-    dir_path = strdup(path);
+    dir_path = fd_split(path, &name);
     if (dir_path == NULL)
         return FD_IO_ERROR;
-    name = dir_path + strlen(dir_path);
-    while (*name != '/')
-        name--;
-    *name++ = '\0';
 
     if (!short_name_valid(name))
         status = FD_INVALID;
@@ -482,6 +504,87 @@ fd_status_t fd_remove(char *path)
     file_close(fd_root_fs, file);
 
     if (file_delete(fd_root_fs, path))
+        return FD_IO_ERROR;
+
+    return FD_OK;
+}
+
+fd_status_t fd_mkdir(char *path)
+{
+    char resolved[PATH_MAX];
+    char *dir_path;
+    char *name;
+    file_t *file;
+    fd_status_t status = FD_OK;
+
+    if (path == NULL || fd_resolve(path, resolved))
+        return FD_INVALID;
+    path = resolved;
+    if (procfs_match(path))
+        return strcmp(path, PROCFS_ROOT) == 0 ? FD_EXISTS : FD_INVALID;
+    if (fd_root_fs == NULL)
+        return FD_INVALID;
+
+    file = file_open_path(fd_root_fs, path);
+    if (file != NULL) {
+        file_close(fd_root_fs, file);
+        return FD_EXISTS;
+    }
+    if (fd_is_dir(path))
+        return FD_EXISTS;
+
+    dir_path = fd_split(path, &name);
+    if (dir_path == NULL)
+        return FD_IO_ERROR;
+
+    if (!short_name_valid(name))
+        status = FD_INVALID;
+    else if (!fd_is_dir(*dir_path ? dir_path : "/"))
+        status = FD_NOT_FOUND;
+    else if (dir_create(fd_root_fs, *dir_path ? dir_path : "/", name))
+        status = FD_IO_ERROR;
+
+    kfree(dir_path);
+
+    return status;
+}
+
+fd_status_t fd_rmdir(char *path)
+{
+    char resolved[PATH_MAX];
+    struct process *proc;
+    size_t len;
+    dir_t *dir;
+    file_t *file;
+    int empty;
+
+    if (path == NULL || fd_resolve(path, resolved))
+        return FD_INVALID;
+    path = resolved;
+    if (procfs_match(path) || strcmp(path, "/") == 0 || fd_root_fs == NULL)
+        return FD_INVALID;
+
+    dir = dir_open_path(fd_root_fs, path);
+    if (dir == NULL) {
+        file = file_open_path(fd_root_fs, path);
+        if (file == NULL)
+            return FD_NOT_FOUND;
+        file_close(fd_root_fs, file);
+        return FD_INVALID;
+    }
+    dir_scan(fd_root_fs, dir);
+    empty = dir_is_empty(dir);
+    dir_close(fd_root_fs, dir);
+    if (!empty)
+        return FD_NOT_EMPTY;
+
+    /* Can't remove the working directory of a live process (or a directory above it) */
+    len = strlen(path);
+    for (int depth = 1; (proc = process_at(depth)) != NULL; depth++)
+        if (strncmp(proc->cwd, path, len) == 0 && (proc->cwd[len] == '\0' || proc->cwd[len] == '/'))
+            return FD_BUSY;
+
+    if (dir_delete(fd_root_fs, path))
         return FD_IO_ERROR;
 
     return FD_OK;

@@ -129,3 +129,16 @@ uint32_t cluster_chain_read(fat_fs_t *fs, uint32_t curr, uint32_t index)
 
     return ret;
 }
+/* Marks every cluster of the chain starting at start as free */
+void cluster_chain_free(fat_fs_t *fs, uint32_t start)
+{
+    uint32_t cluster, next;
+
+    for (cluster = start; cluster >= 2 && cluster < EOC1; cluster = next) {
+        next = fat_table_read(fs, cluster);
+        fat_table_write(fs, cluster, 0);
+        fs->info.free_cluster_count++;
+        if (cluster < fs->info.free_cluster)
+            fs->info.free_cluster = cluster;
+    }
+}

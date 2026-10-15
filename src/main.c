@@ -11,6 +11,7 @@
 #include <fs/disk.h>
 #include <fs/fat.h>
 #include <fs/fd.h>
+#include <fs/blk.h>
 
 void test_allocator();
 void elf_test();
@@ -44,6 +45,7 @@ static void init_start()
         return;
     }
     fd_init(fs);
+    blk_init(disk);
     if (process_init(fs)) {
         puts("Failed to initialize processes\n");
         fat_fs_fini(fs);

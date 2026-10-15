@@ -8,6 +8,9 @@
 #include <cpu/idt.h>
 #include <cpu/proc.h>
 #include <fs/fd.h>
+#include <fs/blk.h>
+#include <include/version.h>
+#include <libs/string.h>
 #include <include/asm.h>
 #include <stdarg.h>
 
@@ -127,4 +130,37 @@ void chdir_handler(struct registers_t *regs)
 void getcwd_handler(struct registers_t *regs)
 {
     regs->eax = (uint32_t) fd_getcwd((char *) regs->ebx, (size_t) regs->ecx);
+}
+
+void mkdir_handler(struct registers_t *regs)
+{
+    regs->eax = (uint32_t) fd_mkdir((char *) regs->ebx);
+}
+
+void rmdir_handler(struct registers_t *regs)
+{
+    regs->eax = (uint32_t) fd_rmdir((char *) regs->ebx);
+}
+
+void uname_handler(struct registers_t *regs)
+{
+    struct utsname *name = (struct utsname *) regs->ebx;
+
+    if (name == NULL) {
+        regs->eax = (uint32_t) FD_INVALID;
+        return;
+    }
+    memset(name, 0, sizeof(*name));
+    strcpy(name->sysname, BUTOS_SYSNAME);
+    strcpy(name->nodename, BUTOS_NODENAME);
+    strcpy(name->release, BUTOS_RELEASE);
+    /* Build time of this file */
+    strcpy(name->version, __DATE__ " " __TIME__);
+    strcpy(name->machine, BUTOS_MACHINE);
+    regs->eax = FD_OK;
+}
+
+void blkinfo_handler(struct registers_t *regs)
+{
+    regs->eax = (uint32_t) blk_info((int) regs->ebx, (blk_info_t *) regs->ecx);
 }
