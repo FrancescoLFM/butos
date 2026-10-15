@@ -2,6 +2,7 @@
 #include <libs/string.h>
 
 #define BUFFER_SIZE         256
+#define PATH_SIZE           128
 #define SHARED_BUFFER_SIZE  512
 
 #define UNRECOGNIZED_ERROR -1
@@ -14,6 +15,13 @@ typedef struct shared_buffer {
   size_t size;
   int cursor; // The last index with valid data, the rest could be likely garbage
 } shared_buffer_t;
+
+typedef struct file_status {
+  char *path;
+  int filename_index;
+  int is_changed;
+  int fd; // -1 if file doesn't exists (yet)
+} file_status_t;
 
 void putc(int fd, char c) {
   char character = c;
@@ -56,22 +64,32 @@ void prompt_input(char *current_file) {
 }
 
 int getc(int fd) {
-  int c = -1;
+  unsigned char c;
 
-  read_syscall(fd, &c, 1);
+  if (read_syscall(fd, &c, 1) <= 0)
+    return EOF;
 
   return c;
 }
 
 int getchar() {
-  int c = -1;
-
-  read_syscall(STDIN_FILENO, &c, 1);
-
-  return c;
+  return getc(STDIN_FILENO);
 }
 
-void insert_mode(shared_buffer_t *shared_buffer) {
+int get_filename_index(char *path) {
+  char *filename, *temp;
+
+  filename = path;
+  temp = path;
+  while ((temp = strchr(temp, '/'))) {
+    temp++;
+    filename = temp;
+  }
+
+  return (int) (filename - path);
+}
+
+int insert_mode(shared_buffer_t *shared_buffer) {
   size_t n = 0;
   int c;
 
@@ -79,13 +97,18 @@ void insert_mode(shared_buffer_t *shared_buffer) {
   while ((c = getchar()) != EOF) {
     if (n >= shared_buffer->size) {
       size_t new_size = shared_buffer->size * 2;
-      krealloc_syscall((void **) &(shared_buffer->buffer), new_size);
+      shared_buffer->buffer = krealloc_syscall((void **) &(shared_buffer->buffer), new_size);
+      if (shared_buffer->buffer == NULL) {
+        return -2;
+      }
     }
     shared_buffer->buffer[n] = c;
     shared_buffer->cursor = n;
     n++;
   }
   puts("\n==============");
+
+  return 0;
 }
 
 void print_file(shared_buffer_t *shared_buffer) {
@@ -95,7 +118,31 @@ void print_file(shared_buffer_t *shared_buffer) {
   putchar('\n');
 }
 
-int parse_commands(char *buffer, int size, shared_buffer_t *shared_buffer) {
+int write_file(shared_buffer_t *shared_buffer, file_status_t *file_status) {
+  if (file_status->fd < 0) {
+    if (create_syscall(file_status->path)) {
+      error("Error creating file, check filesystem.\n");
+      return -2;
+    }
+  }
+
+  file_status->fd = open_syscall(file_status->path);
+  if (file_status->fd < 0) {
+    error("Error opening file, check filesystem.\n");
+    return -2;
+  }
+
+  if (write_syscall(file_status->fd, shared_buffer->buffer, shared_buffer->cursor + 1) < 0) {
+    error("Error writing file, check filesystem.\n");
+    return -2;
+  }
+
+  return 0;
+}
+
+int parse_commands(char *buffer, int size, shared_buffer_t *shared_buffer, file_status_t *file_status) {
+  int errno = 0;
+
   if (size > 1) {
     return UNRECOGNIZED_ERROR;
   }
@@ -105,20 +152,22 @@ int parse_commands(char *buffer, int size, shared_buffer_t *shared_buffer) {
 
   switch (*buffer) {
   case 'i':
-    insert_mode(shared_buffer);
+    errno = insert_mode(shared_buffer);
   break;
   case 'p':
     print_file(shared_buffer);
   break;
+  case 'w':
+    errno = write_file(shared_buffer, file_status);
+  break;
   case 'q':
     return QUIT_REQUEST;
-  break;
   
   default:
     return UNRECOGNIZED_ERROR;
   }
   
-  return 0;
+  return errno;
 }
 
 int alloc_shared_buffer(shared_buffer_t *shared_buffer) {
@@ -136,40 +185,64 @@ int alloc_shared_buffer(shared_buffer_t *shared_buffer) {
 int main(int argc, char **argv) {
   char buffer[BUFFER_SIZE];
   shared_buffer_t shared_buffer;
-  char filename[100];
-  int i;
-  char c;
+  char path[PATH_SIZE];
+  int i, n, c;
   int errno;
+  file_status_t file_status;
+
+  file_status.path = path;
 
   if (argc < 2) {
     puts("No file provided, fallbacking to a.txt");
-    strcpy(filename, "a.txt");
+    strcpy(path, "/a.txt");
+    file_status.filename_index = 1;
   } else {
-    strcpy(filename, argv[1]);
+    if (strlen(argv[1]) > PATH_SIZE) {
+      error ("BUFFER ERROR: Path too long.");
+      return -1;
+    }
+    strcpy(file_status.path, argv[1]);
+    file_status.filename_index = get_filename_index(file_status.path);
   }
 
   if (alloc_shared_buffer(&shared_buffer)) {
-    error ("FATAL ERROR: No memory available.");
+    error("FATAL ERROR: No memory available.");
     return -1;
   }
 
+  file_status.fd = open_syscall(file_status.path);
+  if (file_status.fd > 0) {
+    while ((n = read_syscall(file_status.fd, shared_buffer.buffer, shared_buffer.size)) > 0) {
+      if ((size_t) n == shared_buffer.size) {
+        shared_buffer.buffer = krealloc_syscall(shared_buffer.buffer, shared_buffer.size * 2);
+        if (shared_buffer.buffer == NULL) {
+          error("FATAL ERROR: File is too big, no memory available.");
+          return -1;
+        }
+      }
+    };
+  }
+
+  file_status.is_changed = 0;
+
   for (;;) {
-    prompt_input(filename);
+    prompt_input(&file_status.path[file_status.filename_index]);
 
     i = 0;
-    while((c = getchar()) != '\n') {
+    while((c = getchar()) != '\n' && c != EOF) {
       buffer[i++] = c;
       if (i >= BUFFER_SIZE) {
         break;
       }
     }
 
-    if ((errno = parse_commands(buffer, i, &shared_buffer))) {
+    if ((errno = parse_commands(buffer, i, &shared_buffer, &file_status))) {
       if (errno == QUIT_REQUEST) {
         goto exit;
       }
-      error("Command not recognized. Write h for full list of commands.");
-      putc(STDERR_FILENO, '\n');
+      if (errno == UNRECOGNIZED_ERROR) {
+        error("Command not recognized. Write h for full list of commands.\n");
+      }
     }
   }
 
