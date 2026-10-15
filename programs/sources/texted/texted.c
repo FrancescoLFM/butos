@@ -20,6 +20,7 @@ typedef struct file_status {
   char *path;
   int filename_index;
   int is_changed;
+  int is_saved;
   int fd; // -1 if file doesn't exists (yet)
 } file_status_t;
 
@@ -89,7 +90,7 @@ int get_filename_index(char *path) {
   return (int) (filename - path);
 }
 
-int insert_mode(shared_buffer_t *shared_buffer) {
+int insert_mode(shared_buffer_t *shared_buffer, file_status_t *file_status) {
   size_t n = 0;
   int c;
 
@@ -108,6 +109,8 @@ int insert_mode(shared_buffer_t *shared_buffer) {
   }
   puts("\n==============");
 
+  file_status->is_changed = 1;
+  file_status->is_saved = 0;
   return 0;
 }
 
@@ -116,6 +119,16 @@ void print_file(shared_buffer_t *shared_buffer) {
     putchar(shared_buffer->buffer[i]);
   }
   putchar('\n');
+}
+
+void print_help(void) {
+  puts("Commands:");
+  puts("  i  insert mode (Ctrl+D to leave)");
+  puts("  a  append mode (CTRL+D to leave)");
+  puts("  p  print buffer");
+  puts("  w  write buffer to file");
+  puts("  q  quit");
+  puts("  h  show this help");
 }
 
 int write_file(shared_buffer_t *shared_buffer, file_status_t *file_status) {
@@ -137,6 +150,32 @@ int write_file(shared_buffer_t *shared_buffer, file_status_t *file_status) {
     return -2;
   }
 
+  file_status->is_saved = 1;
+  return 0;
+}
+
+int append_mode(shared_buffer_t *shared_buffer, file_status_t *file_status) {
+  size_t n = shared_buffer->cursor + 1;
+  int c;
+
+  puts("APPEND MODE\n==============");
+  print_file(shared_buffer);
+  while ((c = getchar()) != EOF) {
+    if (n >= shared_buffer->size) {
+      size_t new_size = shared_buffer->size * 2;
+      shared_buffer->buffer = krealloc_syscall((void **) &(shared_buffer->buffer), new_size);
+      if (shared_buffer->buffer == NULL) {
+        return -2;
+      }
+    }
+    shared_buffer->buffer[n] = c;
+    shared_buffer->cursor = n;
+    n++;
+  }
+  puts("\n==============");
+
+  file_status->is_changed = 1;
+  file_status->is_saved = 0;
   return 0;
 }
 
@@ -152,13 +191,19 @@ int parse_commands(char *buffer, int size, shared_buffer_t *shared_buffer, file_
 
   switch (*buffer) {
   case 'i':
-    errno = insert_mode(shared_buffer);
+    errno = insert_mode(shared_buffer, file_status);
   break;
   case 'p':
     print_file(shared_buffer);
   break;
   case 'w':
     errno = write_file(shared_buffer, file_status);
+  break;
+  case 'h':
+    print_help();
+  break;
+  case 'a':
+    append_mode(shared_buffer, file_status);
   break;
   case 'q':
     return QUIT_REQUEST;
@@ -224,6 +269,7 @@ int main(int argc, char **argv) {
   }
 
   file_status.is_changed = 0;
+  file_status.is_saved = 1;
 
   for (;;) {
     prompt_input(&file_status.path[file_status.filename_index]);
@@ -238,6 +284,14 @@ int main(int argc, char **argv) {
 
     if ((errno = parse_commands(buffer, i, &shared_buffer, &file_status))) {
       if (errno == QUIT_REQUEST) {
+        if (file_status.is_changed && !file_status.is_saved) {
+          puts_ns("Quit without saving changes? [s/N]: ");
+          int choice = getchar();
+          if (choice != 's') {
+            continue;
+          }
+        }
+        
         goto exit;
       }
       if (errno == UNRECOGNIZED_ERROR) {
