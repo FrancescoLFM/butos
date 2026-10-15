@@ -14,6 +14,7 @@ Builds on Linux and macOS. `toolchain.mk` (included by every makefile) picks the
 - `make run` / `make vnc` — boot the image in `qemu-system-x86_64` (PIIX3 IDE disk, 2G RAM).
 - `make debug` — QEMU with `-s -S` plus gdb using `src/butos` symbols and `scripts/butos.gdb` (breaks at `main`). Build without optimizations for usable debugging.
 - `make disass` — objdump of the kernel ELF.
+- `make compdb` — regenerate `compile_commands.json` (also done by `make`) via `scripts/compile_commands.py`, used by VS Code/clangd for completion; per-file because kernel and programs both have an `include/def.h`.
 - `make clean`.
 - Sub-builds: `make -C src`, `make -C src/boot`, `make -C init`, `make -C programs`.
 
@@ -49,6 +50,7 @@ The FAT32 step runs as a separate `make fat` sub-make because recipes are expand
 - Descriptors 0/1/2 (`STDIN_FILENO`...) are console streams reserved in the fd table, always open; `close` on them returns `FILE_BUSY` because the table is shared.
 - `/proc` is virtual (`src/fs/procfs.c`, intercepted in `fd_open`/`fd_readdir`; the FAT32 partition only has an empty `/proc` dir so it shows up in `ls /`): `/proc/self`, `/proc/<pid>/{status,cmdline}` (read-only text snapshots taken on open) and `/proc/<pid>/fd/<n>` (opening it reopens what fd `n` refers to: console stream or file path).
 - The shell is `programs/sources/butosh/` (with a tiny libc subset in `ulib.c`): builtins plus `exec` of `/<name>` from the FAT32 root.
+- `programs/libs/` builds `libbutos.a` from kernel libraries shared with programs: `libs/string.c` just includes `src/libs/string.c`, and `programs/libs/alloc.h` maps `kalloc/kcalloc/kfree` on the heap syscalls so the same source works in user space (includes resolve against `programs/` first). A program uses it with `#include <libs/string.h>` and `LDLIBS = ../../libs/libbutos.a` in its makefile (see `texted`); `programs/makefile` builds it before the programs.
 - Programs live in `programs/sources/<name>/` with their own makefile and linker script (example links at 0x01000000, entry `main`), output to `programs/bin/`, and are copied onto the FAT32 partition by `make`. The kernel loads them by path (e.g. `/example`).
 
 ## Docs

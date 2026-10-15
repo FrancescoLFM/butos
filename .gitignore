@@ -11,3 +11,5 @@ butos
 src/boot/boot
 programs/bin
 graphify-out/
+compile_commands.json
+*.a

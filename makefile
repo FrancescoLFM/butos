@@ -38,6 +38,13 @@ all:
 	$(MAKE) -C $(INITDIR)
 	$(MAKE) $(TARGET)
 	$(MAKE) fat
+	$(MAKE) compdb
+
+# compile_commands.json for editor completion (VS Code C/C++, clangd)
+.PHONY=compdb
+compdb:
+	$(call color_text,91,"[MAKE] Generazione di compile_commands.json")
+	python3 scripts/compile_commands.py
 
 # Separate target (run in a sub-make): the layout in layout.mk depends on
 # the binaries built above, and a recipe is expanded before it runs.

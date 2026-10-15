@@ -14,6 +14,7 @@ endif
 CC      = $(CROSS)gcc
 AS      = $(CROSS)as
 LD      = $(CROSS)ld
+AR      = $(CROSS)ar
 OBJCOPY = $(CROSS)objcopy
 OBJDUMP = $(CROSS)objdump
 STRIP   = $(CROSS)strip
