@@ -4,7 +4,8 @@
 #include <include/def.h>
 #include <fs/fat.h>
 
-/* Open files table shared by every process, used by the file syscalls */
+/* Open files table shared by every process, used by the file syscalls.
+   Paths may be relative to the working directory of the running process. */
 
 #define FD_MAX          16
 
@@ -62,6 +63,13 @@ typedef struct {
 /* Returns 1 if entry at index exists (fills *out), 0 at end-of-dir, negative fd_status_t on error.
  * Skips deleted, LFN, and dot entries. index is 0-based over visible entries. */
 int fd_readdir(char *path, int index, fd_dirent_t *out);
+
+/* Changes the working directory of the running process (FD_INVALID from the kernel),
+   FD_NOT_FOUND/FD_INVALID if path isn't a directory */
+fd_status_t fd_chdir(char *path);
+/* Copies the working directory of the running process, returns its length or FD_INVALID
+   if it doesn't fit in size (terminator included) */
+int fd_getcwd(char *buffer, size_t size);
 
 /* Opens a read only descriptor on buffer, a kalloc block freed when it's closed (also on failure) */
 int fd_open_buffer(const char *path, void *buffer, size_t size);

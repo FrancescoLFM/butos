@@ -8,6 +8,8 @@
 
 #define BUFFER_SIZE     128
 #define PATH_SIZE       (BUFFER_SIZE + 16)
+/* Same as the kernel PATH_MAX */
+#define CWD_SIZE        256
 #define MAX_ARGS        16
 #define VAR_SIZE        50
 #define NO_BUILTIN      -1
@@ -164,6 +166,57 @@ static int setcolor_command(char **args, size_t argc)
     return EXIT_SUCCESS;
 }
 
+/* Keeps $PWD in sync with the kernel working directory */
+static int pwd_update(void)
+{
+    char cwd[CWD_SIZE];
+
+    if (getcwd_syscall(cwd, sizeof(cwd)) < 0)
+        return EXIT_FAILURE;
+
+    return var_set("PWD", cwd, 0);
+}
+
+static int cd_command(char **args, size_t argc)
+{
+    char *path = argc > 0 ? args[0] : "/";
+
+    if (argc > 1) {
+        puts_syscall("cd usage: cd [dir]\n");
+        return EXIT_FAILURE;
+    }
+    switch (chdir_syscall(path)) {
+    case FILE_OK:
+        return pwd_update();
+    case FILE_NOT_FOUND:
+        printf_syscall("cd: %s: no such directory\n", path);
+        break;
+    default:
+        printf_syscall("cd: %s: not a directory\n", path);
+        break;
+    }
+
+    return EXIT_FAILURE;
+}
+
+static int pwd_command(char **args, size_t argc)
+{
+    char cwd[CWD_SIZE];
+
+    (void) args;
+    if (argc > 0) {
+        puts_syscall("pwd usage: pwd\n");
+        return EXIT_FAILURE;
+    }
+    if (getcwd_syscall(cwd, sizeof(cwd)) < 0) {
+        puts_syscall("pwd: failed to get the working directory\n");
+        return EXIT_FAILURE;
+    }
+    printf_syscall("%s\n", cwd);
+
+    return EXIT_SUCCESS;
+}
+
 static int exit_command(char **args, size_t argc)
 {
     shell_exit_code = argc > 0 ? atoi(args[0]) : EXIT_SUCCESS;
@@ -180,6 +233,8 @@ static const struct builtin_command builtin_commands[] = {
     {"clear", clear_command},       /* Clear that can change bg color */
     {"setcolor", setcolor_command}, /* Change shell prompt color */
     {"printvars", print_vars},
+    {"cd", cd_command},             /* Change the working directory */
+    {"pwd", pwd_command},           /* Print the working directory */
     {"exit", exit_command},
 };
 
@@ -231,7 +286,8 @@ static int builtin_program_execute(struct command *cmd)
     return NO_BUILTIN;
 }
 
-/* Programs are searched in /usr/bin, /bin, / unless an absolute path is given */
+/* Programs are searched in /usr/bin, /bin, / unless a path is given (e.g. /prog, ./prog, dir/prog),
+   relative paths start from the working directory */
 static int program_execute(struct command *cmd)
 {
     static const char * const search_dirs[] = {
@@ -248,7 +304,7 @@ static int program_execute(struct command *cmd)
     memcpy(&argv[1], cmd->args, cmd->argc * sizeof(char *));
     argv[cmd->argc + 1] = NULL;
 
-    if (cmd->name[0] == '/') {
+    if (strchr(cmd->name, '/') != NULL) {
         if (len + 1 > PATH_SIZE) {
             puts_syscall("Path too long\n");
             return EXIT_FAILURE;
@@ -303,7 +359,11 @@ static int butosh_interpret(char *input)
 
 static void shell_prompt()
 {
-    puts_color_syscall(shell_color, "butosh $ ");
+    char *cwd = var_resolve("PWD");
+
+    puts_color_syscall(shell_color, "butosh ");
+    puts_color_syscall(shell_color, cwd != NULL ? cwd : "?");
+    puts_color_syscall(shell_color, " $ ");
 }
 
 static void shell_scan(char *buffer)
@@ -341,7 +401,8 @@ static void load_default_var()
     var_set("green", "2", 1);
     var_set("red", "4", 1);
     var_set("white", "7", 1);
-    var_set("PWD", "/", 0);
+    if (pwd_update())
+        var_set("PWD", "/", 0);
 }
 
 int main()

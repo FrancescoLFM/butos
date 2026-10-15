@@ -2,7 +2,7 @@
 
 int main(int argc, char **argv)
 {
-    const char *path = argc > 1 ? argv[1] : "/";
+    const char *path = argc > 1 ? argv[1] : ".";
     struct dirent entry;
     int i = 0, n;
 

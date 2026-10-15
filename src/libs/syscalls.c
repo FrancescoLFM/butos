@@ -118,3 +118,13 @@ void readdir_handler(struct registers_t *regs)
 {
     regs->eax = (uint32_t) fd_readdir((char *) regs->ebx, (int) regs->ecx, (fd_dirent_t *) regs->edx);
 }
+
+void chdir_handler(struct registers_t *regs)
+{
+    regs->eax = (uint32_t) fd_chdir((char *) regs->ebx);
+}
+
+void getcwd_handler(struct registers_t *regs)
+{
+    regs->eax = (uint32_t) fd_getcwd((char *) regs->ebx, (size_t) regs->ecx);
+}

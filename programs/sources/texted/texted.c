@@ -239,8 +239,8 @@ int main(int argc, char **argv) {
 
   if (argc < 2) {
     puts("No file provided, fallbacking to a.txt");
-    strcpy(path, "/a.txt");
-    file_status.filename_index = 1;
+    strcpy(path, "a.txt");
+    file_status.filename_index = 0;
   } else {
     if (strlen(argv[1]) > PATH_SIZE) {
       error ("BUFFER ERROR: Path too long.");

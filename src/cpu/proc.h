@@ -2,6 +2,7 @@
 #define PROC_H
 
 #include <fs/elf.h>
+#include <fs/path.h>
 
 #define DEFAULT_STACK   1024
 #define DEFAULT_HEAP    1000000
@@ -11,6 +12,8 @@
 /* Processes nest through exec on the kernel stack, this bounds the nesting depth */
 #define PROC_MAX            16
 #define PROC_NAME_LEN       16
+/* Working directory of the processes started by the kernel */
+#define PROC_ROOT_CWD       "/"
 
 typedef enum {
     /* The innermost process, the one executing */
@@ -37,6 +40,8 @@ struct process {
     uintptr_t vstart;
     uintptr_t vend;
     uintptr_t paddr;
+    /* Normalized absolute path, inherited from the parent: relative paths start from here */
+    char cwd[PATH_MAX];
 };
 
 typedef enum {
@@ -61,5 +66,7 @@ struct process *process_at(int depth);
 struct process *process_current(void);
 /* NULL if no live process has that pid */
 struct process *process_get(int pid);
+/* Working directory of the running process, PROC_ROOT_CWD when called from the kernel */
+const char *process_cwd(void);
 
 #endif

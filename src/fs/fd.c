@@ -1,5 +1,6 @@
 #include <fs/fd.h>
 #include <fs/procfs.h>
+#include <fs/path.h>
 #include <cpu/proc.h>
 #include <drivers/console.h>
 #include <include/colors.h>
@@ -82,6 +83,12 @@ static int fd_alloc(const char *path)
     return fd;
 }
 
+/* Absolute normalized form of a path relative to the running process working directory */
+static int fd_resolve(const char *path, char *out)
+{
+    return path_resolve(process_cwd(), path, out, PATH_MAX);
+}
+
 static void fd_release(struct fd_entry *entry)
 {
     if (entry->type == FD_TYPE_RAM && entry->ram.owned)
@@ -141,11 +148,13 @@ fd_status_t vfd_unregister(const char *path)
 
 int fd_open(char *path)
 {
+    char resolved[PATH_MAX];
     file_t *file;
     int fd, i;
 
-    if (path == NULL || *path != '/')
+    if (path == NULL || fd_resolve(path, resolved))
         return FD_INVALID;
+    path = resolved;
 
     if (procfs_match(path))
         return procfs_open(path);
@@ -390,13 +399,17 @@ static int short_name_valid(char *name)
 
 fd_status_t fd_create(char *path)
 {
+    char resolved[PATH_MAX];
     char *dir_path;
     char *name;
     file_t *file;
     fd_status_t status = FD_OK;
     int i;
 
-    if (path == NULL || *path != '/' || procfs_match(path))
+    if (path == NULL || fd_resolve(path, resolved))
+        return FD_INVALID;
+    path = resolved;
+    if (procfs_match(path))
         return FD_INVALID;
 
     for (i = 0; i < VFD_MAX; i++)
@@ -433,11 +446,15 @@ fd_status_t fd_create(char *path)
 
 fd_status_t fd_remove(char *path)
 {
+    char resolved[PATH_MAX];
     file_t *file;
     file_t *open;
     int i;
 
-    if (path == NULL || *path != '/' || procfs_match(path))
+    if (path == NULL || fd_resolve(path, resolved))
+        return FD_INVALID;
+    path = resolved;
+    if (procfs_match(path))
         return FD_INVALID;
 
     for (i = 0; i < VFD_MAX; i++)
@@ -498,13 +515,15 @@ static void decode_83(const char *raw, char *out)
 
 int fd_readdir(char *path, int index, fd_dirent_t *out)
 {
+    char resolved[PATH_MAX];
     dir_t *dir;
     int real_idx = 0;
     size_t i;
     entry_t *e;
 
-    if (path == NULL || out == NULL || index < 0)
+    if (path == NULL || out == NULL || index < 0 || fd_resolve(path, resolved))
         return FD_INVALID;
+    path = resolved;
     if (procfs_match(path))
         return procfs_readdir(path, index, out);
     if (fd_root_fs == NULL)
@@ -534,4 +553,43 @@ int fd_readdir(char *path, int index, fd_dirent_t *out)
 
     dir_close(fd_root_fs, dir);
     return 0;
+}
+
+fd_status_t fd_chdir(char *path)
+{
+    struct process *proc = process_current();
+    char resolved[PATH_MAX];
+    fd_dirent_t entry;
+    file_t *file;
+    int ret;
+
+    if (proc == NULL || path == NULL || fd_resolve(path, resolved))
+        return FD_INVALID;
+    /* Only directories can be listed, even empty ones return 0 instead of an error */
+    ret = fd_readdir(resolved, 0, &entry);
+    if (ret == FD_NOT_FOUND && !procfs_match(resolved) && fd_root_fs != NULL) {
+        /* A regular file isn't a missing directory */
+        file = file_open_path(fd_root_fs, resolved);
+        if (file != NULL) {
+            file_close(fd_root_fs, file);
+            return FD_INVALID;
+        }
+    }
+    if (ret < 0)
+        return (fd_status_t) ret;
+    strcpy(proc->cwd, resolved);
+
+    return FD_OK;
+}
+
+int fd_getcwd(char *buffer, size_t size)
+{
+    const char *cwd = process_cwd();
+    size_t len = strlen(cwd);
+
+    if (buffer == NULL || len + 1 > size)
+        return FD_INVALID;
+    memcpy(buffer, cwd, len + 1);
+
+    return (int) len;
 }

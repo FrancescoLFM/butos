@@ -4,7 +4,7 @@
 #include <cpu/idt.h>
 #include <libs/print.h>
 
-#define SYSCALLS_NUM 18
+#define SYSCALLS_NUM 20
 
 void putc_handler(struct registers_t *regs);
 void puts_handler(struct registers_t *regs);
@@ -24,13 +24,16 @@ void create_handler(struct registers_t *regs);
 void remove_handler(struct registers_t *regs);
 void readdir_handler(struct registers_t *regs);
 void krealloc_handler(struct registers_t *regs);
+void chdir_handler(struct registers_t *regs);
+void getcwd_handler(struct registers_t *regs);
 
 static void __attribute__((unused)) (*syscall_handlers[SYSCALLS_NUM])(struct registers_t *) = {putc_handler, puts_handler, printf_handler,
                                                                                                clear_handler, getchar_handler, kalloc_handler,
                                                                                                kfree_handler, exec_handler, puts_color_handler,
                                                                                                open_handler, close_handler, read_handler,
                                                                                                write_handler, seek_handler, create_handler,
-                                                                                               remove_handler, readdir_handler, krealloc_handler};
+                                                                                               remove_handler, readdir_handler, krealloc_handler,
+                                                                                               chdir_handler, getcwd_handler};
 
 /* 
     ? Butos syscalls collection
@@ -188,7 +191,7 @@ static force_inline void *krealloc_syscall(void *buff, size_t size)
 
 ///@brief Run the program at path as main(argc, argv) and wait for it to exit
 ///@param EAX: Exec syscall num (7), on return the exec status
-///@param EBX: Program path
+///@param EBX: Program path, absolute or relative
 ///@param ECX: Pointer to the exit code (nullable)
 ///@param EDX: NULL terminated arguments, program name first (NULL means just path)
 static force_inline int exec_syscall(char *path, char **argv, int *exit_code) 
@@ -248,7 +251,7 @@ static force_inline void puts_color_syscall(uint8_t color, char *s)
 
 ///@brief Open an existing file
 ///@param EAX: Open syscall num (9), on return the file descriptor or an error
-///@param EBX: Absolute file path
+///@param EBX: File path, absolute or relative to the working directory
 static force_inline int open_syscall(char *path) 
 {
     int ret;
@@ -343,7 +346,7 @@ static force_inline int seek_syscall(int fd, int offset, int whence)
 
 ///@brief Create an empty file, the name must be 8.3
 ///@param EAX: Create syscall num (14), on return the status
-///@param EBX: Absolute file path
+///@param EBX: File path, absolute or relative to the working directory
 static force_inline int create_syscall(char *path) 
 {
     int ret;
@@ -362,7 +365,7 @@ static force_inline int create_syscall(char *path)
 
 ///@brief Delete a file that is not open
 ///@param EAX: Remove syscall num (15), on return the status
-///@param EBX: Absolute file path
+///@param EBX: File path, absolute or relative to the working directory
 static force_inline int remove_syscall(char *path)
 {
     int ret;
@@ -387,7 +390,7 @@ struct dirent {
 
 ///@brief Read directory entry at index (0-based, skips . and ..)
 ///@param EAX: Readdir syscall num (16), on return 1=found, 0=end, negative=error
-///@param EBX: Directory path
+///@param EBX: Directory path, absolute or relative
 ///@param ECX: Entry index
 ///@param EDX: Pointer to struct dirent to fill
 static force_inline int readdir_syscall(char *path, int index, struct dirent *entry)
@@ -398,6 +401,41 @@ static force_inline int readdir_syscall(char *path, int index, struct dirent *en
         "int $0x80 \n"
         : "=a"(ret)
         : "a"(16), "b"((uintptr_t)path), "c"(index), "d"((uintptr_t)entry)
+        : "memory"
+    );
+
+    return ret;
+}
+
+///@brief Change the working directory, relative paths of every syscall start from it
+///@param EAX: Chdir syscall num (18), on return the status (FILE_NOT_FOUND, FILE_INVALID if not a directory)
+///@param EBX: Directory path, absolute or relative
+static force_inline int chdir_syscall(char *path)
+{
+    int ret;
+
+    __asm__ __volatile__ (
+        "int $0x80 \n"
+        : "=a"(ret)
+        : "a"(18), "b"((uintptr_t)path)
+        : "memory"
+    );
+
+    return ret;
+}
+
+///@brief Copy the absolute path of the working directory
+///@param EAX: Getcwd syscall num (19), on return its length or FILE_INVALID if it doesn't fit
+///@param EBX: Buffer
+///@param ECX: Buffer size, terminator included
+static force_inline int getcwd_syscall(char *buff, size_t size)
+{
+    int ret;
+
+    __asm__ __volatile__ (
+        "int $0x80 \n"
+        : "=a"(ret)
+        : "a"(19), "b"((uintptr_t)buff), "c"(size)
         : "memory"
     );
 

@@ -153,6 +153,9 @@ static void procfs_status(struct process *proc, struct procfs_text *text)
     text_field(text, "PPid:   ", (uint32_t) proc->ppid, 10);
     text_puts(text, proc->state == PROC_STATE_RUNNING ? "State:  R (running)\n" : "State:  S (waiting)\n");
     text_field(text, "Depth:  ", (uint32_t) proc->depth, 10);
+    text_puts(text, "Cwd:    ");
+    text_puts(text, proc->cwd);
+    text_puts(text, "\n");
     text_field(text, "Entry:  ", proc->entry, 16);
     text_puts(text, "Image:  ");
     text_num(text, proc->vstart, 16);

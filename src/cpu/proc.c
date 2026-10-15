@@ -128,6 +128,7 @@ static void process_table_push(int argc, char **argv, uintptr_t entry,
     proc->vstart = vstart;
     proc->vend = vend;
     proc->paddr = paddr;
+    strcpy(proc->cwd, process_cwd());
     if (parent != NULL)
         parent->state = PROC_STATE_WAITING;
     proc_depth++;
@@ -215,6 +216,13 @@ struct process *process_current(void)
     return process_at(proc_depth);
 }
 
+const char *process_cwd(void)
+{
+    struct process *proc = process_current();
+
+    return proc != NULL ? proc->cwd : PROC_ROOT_CWD;
+}
+
 struct process *process_get(int pid)
 {
     for (int i = 0; i < proc_depth; i++)
@@ -267,6 +275,7 @@ proc_status_t process_spawn(char *path, char **argv, int *exit_code)
 {
     elf_t elf;
     file_t *file;
+    char resolved[PATH_MAX];
     char **args;
     int argc;
     proc_status_t status = PROC_OK;
@@ -274,7 +283,9 @@ proc_status_t process_spawn(char *path, char **argv, int *exit_code)
     if (!proc_initialized || proc_root_fs == NULL)
         return PROC_EXEC_FAILED;
     /* path may live in the caller's image: it's only read before switching page directory */
-    file = file_open_path(proc_root_fs, path);
+    if (path_resolve(process_cwd(), path, resolved, sizeof(resolved)))
+        return PROC_NOT_FOUND;
+    file = file_open_path(proc_root_fs, resolved);
     if (file == NULL)
         return PROC_NOT_FOUND;
     args = process_args_copy(path, argv, &argc);
