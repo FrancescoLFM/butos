@@ -1,5 +1,7 @@
 #include <include/syscalls.h>
 
+#define BUFFER_LEN  512
+
 static void error(char *msg)
 {
   char *end = msg;
@@ -10,7 +12,7 @@ static void error(char *msg)
 }
 
 int main(int argc, char **argv) {
-  char buffer[512];
+  char buffer[BUFFER_LEN];
   int n;
 
   if (argc < 2) {
@@ -21,17 +23,22 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  int fd = open_syscall(argv[1]);
-  if (fd < 0) {
-    error("cat: can't open the file\n");
-    return 1;
-  }
+  for (int i = 1; i < argc; i++) {
+    int fd = open_syscall(argv[i]);
+    if (fd < 0) {
+      error("cat: cannot open the file ");
+      error(argv[i]);
+      error("\n");
+      return 1;
+    }
 
-  while ((n = read_syscall(fd, buffer, sizeof(buffer))) > 0)
-    write_syscall(STDOUT_FILENO, buffer, n);
+    while ((n = read_syscall(fd, buffer, sizeof(buffer))) > 0)
+      write_syscall(STDOUT_FILENO, buffer, n);
+
+    close_syscall(fd);
+  }
 
   write_syscall(STDOUT_FILENO, "\n", 1);
 
-  close_syscall(fd);
   return 0;
 }
