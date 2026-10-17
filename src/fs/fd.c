@@ -33,6 +33,12 @@ struct fd_entry {
             /* buf is a kalloc block freed on close */
             int      owned;
         } ram;
+        /* Read from pos, written at size */
+        struct {
+            uint8_t *buf;
+            size_t   size;
+            size_t   capacity;
+        } pipe;
         /* FD_STDIN, FD_STDOUT or FD_STDERR */
         int stream;
     };
@@ -60,6 +66,34 @@ static struct fd_entry *fd_get(int fd)
         return NULL;
 
     return &fd_table[fd];
+}
+
+int fd_target(int fd)
+{
+    struct process *proc = process_current();
+
+    if (fd >= 0 && fd < FD_STD_NUM && proc != NULL)
+        fd = proc->stdio[fd];
+
+    return fd_get(fd) != NULL ? fd : FD_INVALID;
+}
+
+/* Entry fd refers to for the running process, the standard streams may be redirected */
+static struct fd_entry *fd_lookup(int fd)
+{
+    fd = fd_target(fd);
+
+    return fd >= 0 ? &fd_table[fd] : NULL;
+}
+
+int fd_console_stream(int fd)
+{
+    struct fd_entry *entry = fd_lookup(fd);
+
+    if (entry == NULL || entry->type != FD_TYPE_CONSOLE)
+        return FD_INVALID;
+
+    return entry->stream;
 }
 
 /* Claims a free slot owned by the running process, path is copied (nullable) */
@@ -93,6 +127,8 @@ static void fd_release(struct fd_entry *entry)
 {
     if (entry->type == FD_TYPE_RAM && entry->ram.owned)
         kfree(entry->ram.buf);
+    if (entry->type == FD_TYPE_PIPE)
+        kfree(entry->pipe.buf);
     if (entry->path != NULL)
         kfree(entry->path);
     memset(entry, 0, sizeof(*entry));
@@ -206,6 +242,48 @@ int fd_open_buffer(const char *path, void *buffer, size_t size)
     return fd;
 }
 
+int fd_pipe(void)
+{
+    int fd;
+
+    fd = fd_alloc(NULL);
+    if (fd < 0)
+        return fd;
+    fd_table[fd].type = FD_TYPE_PIPE;
+
+    return fd;
+}
+
+/* Appends to the pipe, growing its buffer: returns the bytes written or an error when full */
+static int fd_pipe_write(struct fd_entry *entry, const void *buffer, size_t size)
+{
+    size_t capacity = entry->pipe.capacity;
+    uint8_t *buf;
+
+    if (size > FD_PIPE_MAX - entry->pipe.size)
+        size = FD_PIPE_MAX - entry->pipe.size;
+    if (size == 0)
+        return FD_IO_ERROR;
+
+    if (entry->pipe.size + size > capacity) {
+        if (capacity == 0)
+            capacity = 512;
+        while (capacity < entry->pipe.size + size)
+            capacity *= 2;
+        if (capacity > FD_PIPE_MAX)
+            capacity = FD_PIPE_MAX;
+        buf = krealloc(entry->pipe.buf, capacity);
+        if (buf == NULL)
+            return FD_IO_ERROR;
+        entry->pipe.buf = buf;
+        entry->pipe.capacity = capacity;
+    }
+    memcpy(entry->pipe.buf + entry->pipe.size, buffer, size);
+    entry->pipe.size += size;
+
+    return (int) size;
+}
+
 int fd_reopen(int fd)
 {
     struct fd_entry *entry;
@@ -243,7 +321,7 @@ fd_status_t fd_close(int fd)
     struct fd_entry *entry;
     fd_status_t status = FD_OK;
 
-    entry = fd_get(fd);
+    entry = fd_lookup(fd);
     if (entry == NULL)
         return FD_INVALID;
     /* The table is shared: closing a standard stream would close it for every process */
@@ -266,12 +344,20 @@ int fd_read(int fd, void *buffer, size_t size)
     uint8_t *out = buffer;
     size_t avail, to_read, i;
 
-    entry = fd_get(fd);
+    entry = fd_lookup(fd);
     if (entry == NULL || buffer == NULL)
         return FD_INVALID;
 
     if (entry->type == FD_TYPE_CONSOLE)
         return entry->stream == FD_STDIN ? console_read(buffer, size) : FD_INVALID;
+
+    if (entry->type == FD_TYPE_PIPE) {
+        avail   = entry->pipe.size - entry->pos;
+        to_read = (size < avail) ? size : avail;
+        memcpy(out, entry->pipe.buf + entry->pos, to_read);
+        entry->pos += (uint32_t) to_read;
+        return (int) to_read;
+    }
 
     if (entry->type == FD_TYPE_RAM) {
         avail   = (entry->pos < entry->ram.size) ? entry->ram.size - entry->pos : 0;
@@ -292,7 +378,7 @@ int fd_write(int fd, void *buffer, size_t size)
     struct fd_entry *entry;
     size_t written;
 
-    entry = fd_get(fd);
+    entry = fd_lookup(fd);
     if (entry == NULL || buffer == NULL)
         return FD_INVALID;
     if (size == 0)
@@ -303,6 +389,9 @@ int fd_write(int fd, void *buffer, size_t size)
             return FD_INVALID;
         return console_write(entry->stream == FD_STDERR ? RED : STD_COLOR, buffer, size);
     }
+
+    if (entry->type == FD_TYPE_PIPE)
+        return fd_pipe_write(entry, buffer, size);
 
     if (entry->type == FD_TYPE_RAM) {
         if (!entry->ram.writable)
@@ -334,13 +423,16 @@ int fd_seek(int fd, int offset, int whence)
     int base;
     int pos;
 
-    entry = fd_get(fd);
+    entry = fd_lookup(fd);
     if (entry == NULL || entry->type == FD_TYPE_CONSOLE)
         return FD_INVALID;
 
-    file_size = (entry->type == FD_TYPE_FAT32)
-        ? entry->file->entry->size
-        : (uint32_t) entry->ram.size;
+    if (entry->type == FD_TYPE_FAT32)
+        file_size = entry->file->entry->size;
+    else if (entry->type == FD_TYPE_PIPE)
+        file_size = (uint32_t) entry->pipe.size;
+    else
+        file_size = (uint32_t) entry->ram.size;
 
     switch (whence) {
     case FD_SEEK_SET:

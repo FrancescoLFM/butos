@@ -42,6 +42,10 @@
 /* used by input functions */
 extern queue_t *input_buffer;
 
+/* Starts with the KEYMAP_DEFAULT layout (make KEYMAP=<name>, "it" otherwise) */
 void keyboard_start(size_t input_buffer_size);
+/* Selects a layout of src/drivers/keymaps.h by name ("it", "us"), 1 if there is none */
+int keyboard_set_layout(const char *name);
+const char *keyboard_layout(void);
 
 #endif

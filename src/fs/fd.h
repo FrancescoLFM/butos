@@ -15,6 +15,9 @@
 #define FD_STDERR       2
 #define FD_STD_NUM      3
 
+/* Bytes a pipe can hold */
+#define FD_PIPE_MAX     (64 * 1024)
+
 #define VFD_MAX         8
 #define VFD_PATH_MAX    64
 
@@ -22,6 +25,7 @@ typedef enum {
     FD_TYPE_FAT32,
     FD_TYPE_RAM,
     FD_TYPE_CONSOLE,
+    FD_TYPE_PIPE,
 } fd_type_t;
 
 #define FD_SEEK_SET     0
@@ -83,6 +87,17 @@ int fd_open_buffer(const char *path, void *buffer, size_t size);
 int fd_reopen(int fd);
 /* Process nesting depth that opened fd (0 for the standard streams) or an fd_status_t error */
 int fd_owner(int fd);
+
+/* Opens an empty pipe: a kernel buffer that grows on write (always at its end, up to
+   FD_PIPE_MAX) and is read from the start, freed on close. Processes run one at a time,
+   so a pipeline writes it whole before reading it. Returns the descriptor or an error */
+int fd_pipe(void);
+/* Index of the fd table fd refers to for the running process (the standard streams follow
+   its redirections, see struct process), FD_INVALID if it isn't open */
+int fd_target(int fd);
+/* Console stream (FD_STDIN, FD_STDOUT, FD_STDERR) fd refers to for the running process,
+   FD_INVALID if it's redirected elsewhere or isn't open */
+int fd_console_stream(int fd);
 
 /* Register/unregister RAM-backed virtual files.
  * vfd_register may be called before or after fd_init.

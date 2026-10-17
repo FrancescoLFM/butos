@@ -30,6 +30,8 @@ int main(int argc, char **argv) {
   while ((n = read_syscall(fd, buffer, sizeof(buffer))) > 0)
     write_syscall(STDOUT_FILENO, buffer, n);
 
+  write_syscall(STDOUT_FILENO, "\n", 1);
+
   close_syscall(fd);
   return 0;
 }

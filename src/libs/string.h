@@ -22,6 +22,7 @@ char *strcpy(char *restrict dest, const char *restrict src);
 char *strncpy(char *restrict dest, const char *restrict src, size_t n);
 char *strtok(char *restrict str, const char *restrict delim);
 char *strdup(const char *restrict s);
+char *strndup(const char *restrict s, size_t n);
 size_t strcspn(const char *s1, register const char *s2);
 char *strsep(char **stringp, const char *delim);
 

@@ -14,8 +14,9 @@ int main(int argc, char **argv)
         i++;
     }
 
-    if (n < 0)
-        puts_syscall("ls: error\n");
+    if (n < 0) {
+        printf_syscall("ls: cannot access '%s'\n", path);
+    }
 
     return 0;
 }

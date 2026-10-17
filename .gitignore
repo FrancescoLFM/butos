@@ -13,3 +13,4 @@ programs/bin
 graphify-out/
 compile_commands.json
 *.a
+.cache/

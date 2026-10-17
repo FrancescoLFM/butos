@@ -17,6 +17,7 @@ LDSCRIPT = butosh.ld
 SOURCES_C = $(wildcard *.c)
 OBJECTS = $(SOURCES_C:.c=.o)
 EXECUTABLE = $(BINDIR)/butosh
+LDLIBS = ../../libs/libbutos.a
 
 .PHONY=all
 all: $(SOURCES_C) $(SOURCES_ASM) $(EXECUTABLE)
@@ -24,7 +25,7 @@ all: $(SOURCES_C) $(SOURCES_ASM) $(EXECUTABLE)
 .c.o:
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(EXECUTABLE): $(OBJECTS)
+$(EXECUTABLE): $(OBJECTS) $(LDLIBS)
 	mkdir -p $(BINDIR)
 	$(CC) $(CFLAGS) $^ -o $@ -T $(LDSCRIPT)
 

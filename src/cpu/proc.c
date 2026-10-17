@@ -106,7 +106,7 @@ static int process_call(uintptr_t entry, int argc, char **argv)
 }
 
 /* Registers the process about to run as the innermost one, the caller must check PROC_MAX */
-static void process_table_push(int argc, char **argv, uintptr_t entry,
+static void process_table_push(int argc, char **argv, const int *stdio, uintptr_t entry,
                                uintptr_t vstart, uintptr_t vend, uintptr_t paddr)
 {
     struct process *parent = process_current();
@@ -129,6 +129,8 @@ static void process_table_push(int argc, char **argv, uintptr_t entry,
     proc->vend = vend;
     proc->paddr = paddr;
     strcpy(proc->cwd, process_cwd());
+    for (int i = 0; i < FD_STD_NUM; i++)
+        proc->stdio[i] = stdio != NULL ? stdio[i] : (parent != NULL ? parent->stdio[i] : i);
     if (parent != NULL)
         parent->state = PROC_STATE_WAITING;
     proc_depth++;
@@ -145,7 +147,7 @@ static void process_table_pop(void)
         parent->state = PROC_STATE_RUNNING;
 }
 
-int process_exec(elf_t *elf, int argc, char **argv, int *exit_code)
+int process_exec(elf_t *elf, int argc, char **argv, const int *stdio, int *exit_code)
 {
     uint32_t *kernel_dir;
     uint32_t *page_dir;
@@ -180,7 +182,7 @@ int process_exec(elf_t *elf, int argc, char **argv, int *exit_code)
             if (p_header_memload(&elf->p_headers[i], elf))
                 goto restore_dir;
     }
-    process_table_push(argc, argv, entry, vstart, vend, paddr);
+    process_table_push(argc, argv, stdio, entry, vstart, vend, paddr);
     *exit_code = process_call(entry, argc, argv);
     /* Files the process left open */
     fd_close_owned(proc_depth);
@@ -271,17 +273,22 @@ static char **process_args_copy(char *path, char **argv, int *argc)
     return copy;
 }
 
-proc_status_t process_spawn(char *path, char **argv, int *exit_code)
+proc_status_t process_spawn(char *path, char **argv, const int *stdio, int *exit_code)
 {
     elf_t elf;
     file_t *file;
     char resolved[PATH_MAX];
     char **args;
     int argc;
+    /* Resolved while the caller is still the running process */
+    int targets[FD_STD_NUM];
     proc_status_t status = PROC_OK;
 
     if (!proc_initialized || proc_root_fs == NULL)
         return PROC_EXEC_FAILED;
+    for (int i = 0; stdio != NULL && i < FD_STD_NUM; i++)
+        if ((targets[i] = fd_target(stdio[i])) < 0)
+            return PROC_INVALID_ARGS;
     /* path may live in the caller's image: it's only read before switching page directory */
     if (path_resolve(process_cwd(), path, resolved, sizeof(resolved)))
         return PROC_NOT_FOUND;
@@ -295,7 +302,7 @@ proc_status_t process_spawn(char *path, char **argv, int *exit_code)
     }
     if (elf_init(&elf, file, proc_root_fs))
         status = PROC_INVALID_EXEC;
-    else if (process_exec(&elf, argc, args, exit_code))
+    else if (process_exec(&elf, argc, args, stdio != NULL ? targets : NULL, exit_code))
         status = PROC_EXEC_FAILED;
 
     elf_fini(&elf);

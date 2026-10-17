@@ -118,7 +118,7 @@ int base_convert(char *buffer, size_t size, uint32_t num, uint32_t base)
     return length;
 }
 
-int vprintk_c(uint8_t color, char *str, va_list list)
+int vprintk_out(print_out_t out, void *ctx, char *str, va_list list)
 {
     char buffer[80];
 
@@ -131,7 +131,7 @@ int vprintk_c(uint8_t color, char *str, va_list list)
 
     while (*str) {
         if (*str != '%') {
-            putc_c(color, *str++);
+            out(ctx, *str++);
             continue;
         }
         
@@ -141,7 +141,8 @@ int vprintk_c(uint8_t color, char *str, va_list list)
 
         if (opt == 's') {
             char *p = va_arg(list, char *);
-            puts_c(color, p);
+            while (*p)
+                out(ctx, *p++);
             continue;
         }
 
@@ -177,13 +178,24 @@ int vprintk_c(uint8_t color, char *str, va_list list)
             return read;
         
         if (is_signed && (int32_t)num < 0)
-            putc_c(color, '-');
-        puts_c(color, buffer);
+            out(ctx, '-');
+        for (char *p = buffer; *p; p++)
+            out(ctx, *p);
         
         read++;
     }
 
     return read;
+}
+
+static void vga_out(void *ctx, char c)
+{
+    putc_c(*(uint8_t *) ctx, c);
+}
+
+int vprintk_c(uint8_t color, char *str, va_list list)
+{
+    return vprintk_out(vga_out, &color, str, list);
 }
 
 int printk_c(uint8_t color, char *str, ...)

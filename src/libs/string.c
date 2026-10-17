@@ -290,3 +290,15 @@ char *strdup(const char *restrict s) {
 	return (copy);
 }
 
+
+char *strndup(const char *restrict s, size_t n) {
+    size_t len;
+	char *copy;
+
+	len = strnlen(s, n);
+	if (!(copy = (char *) kcalloc(len + 1, sizeof(char))))
+		return (NULL);
+	memcpy(copy, s, len);
+	copy[len] = '\0';
+	return (copy);
+}

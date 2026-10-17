@@ -304,7 +304,7 @@ static void run_program(fat_fs_t *fs, char *path)
     elf_status = elf_init(&elf, file, fs);
     if (elf_status) {
         printk("%s: invalid executable (error %d)\n", path, elf_status);
-    } else if (process_exec(&elf, 1, argv, &exit_code)) {
+    } else if (process_exec(&elf, 1, argv, NULL, &exit_code)) {
         printk("%s: failed to execute\n", path);
     } else {
         printk("\n%s exited with code %d\n", path, exit_code);

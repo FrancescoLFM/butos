@@ -4,6 +4,7 @@
 #include <include/asm.h>
 #include <include/trigger.h>
 #include <libs/alloc.h>
+#include <drivers/keymaps.h>
 
 #define EXTENDED_SCANCODE         0xE0
 #define RELEASED(SCAN)            ((SCAN) | RELEASED_KEY)
@@ -11,93 +12,38 @@
 
 #define IN_ARRAY(ELEM, ARRAY)  (memchr((ARRAY), (ELEM), sizeof(ARRAY)) != NULL)
 
-/**
- * Object keyboard
- * - holds the reference of the lookup tables for
- *   converting the scancodes into ascii characters
- * - allows the implementation of different keyboards
- *   for different languages or different setups
- */
-struct keyboard {
-    uint8_t *std_table;
-    uint8_t *shift_table;
-    uint8_t *altgr_table;
-
-    uint8_t *selected;
-    flag_t caps_lock;
-};
-
-uint8_t STANDARD_KEYS[] = {
-    0, 0, '1', '2', '3', '4', '5', '6', '7', '8', '9','0', '\'', 'i', '\x08',
-    '\t', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', 'e', '+', '\n', 0,
-    'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'o', 'a', '\\', 0, 'u', 'z',
-    'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '-', 0, 0, 0, ' ', 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '<', 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
-
-uint8_t SHIFT_KEYS[] = {
-    0, 0, '!', '"', 0, '$', '%', '&', '/', '(', ')', '=', '?', '^', '\x08',
-    '\t', 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', 'e', '*', '\n', 0,
-    'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'o', 'a', '|', 0, 'u', 'Z',
-    'X', 'C', 'V', 'B', 'N', 'M', ';', ':', '_', 0, 0, 0, ' ', 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '>', 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
-
-uint8_t ALTGR_KEYS[] = {
-    0, 0, '1', '2', '3', '4', '5', '6', '{', '[', ']', '}', '`', '~', '\x08',
-    '\t', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n', 0,
-    'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', '@', '#', '\\', 0, 'u', 'z',
-    'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '-', 0, 0, 0, ' ', 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '<', 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
+#ifndef KEYMAP_DEFAULT
+#define KEYMAP_DEFAULT  "it"
+#endif
 
 static queue_t input_buffer_;
 queue_t *input_buffer = &input_buffer_;
 
-/**
- * Default keyboard
- */
-struct keyboard std_keyboard = {
-    .std_table = STANDARD_KEYS,
-    .shift_table = SHIFT_KEYS,
-    .altgr_table = ALTGR_KEYS,
+static const struct keymap *current_keymap = &keymaps[0];
 
-    .selected = STANDARD_KEYS,
-    .caps_lock = 0
-};
-
-struct keyboard *current_keyboard = &std_keyboard;
+/* Modifier state: the table a key reads from depends on what is held right now */
+static int shift_held = 0;      /* bit 0 left shift, bit 1 right shift */
+static int altgr_held = 0;
+static int caps_lock = 0;
 trigger_t extended = 0;
 /* Either control key is held: letters become control characters (Ctrl+D is 0x04) */
 static int control_held = 0;
 
-int select_keyboard(struct keyboard *keyboard)
+int keyboard_set_layout(const char *name)
 {
-    if (keyboard->std_table == NULL)
-        return 1;
-    current_keyboard = keyboard;
-    return 0;
+    for (size_t i = 0; i < ARR_SIZE(keymaps); i++) {
+        if (strcmp(keymaps[i].name, name) == 0) {
+            current_keymap = &keymaps[i];
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+const char *keyboard_layout(void)
+{
+    return current_keymap->name;
 }
 
 static
@@ -111,46 +57,51 @@ uint16_t keyboard_get_scancode()
     return scan;
 }
 
-/**
- * Selects the current table of characters from
- * the ones in the keyboard object
- */
+/* Tracks the modifiers, press and release */
 static
-void keyboard_change_table(struct keyboard *keyboard, uint8_t scan, int ext)
+void keyboard_modifier(uint8_t scan, int ext)
 {
+    int pressed = !(scan & RELEASED_KEY);
+    int bit;
+
+    scan = UNRELEASED(scan);
     if (!ext) switch (scan) {
-        case RIGHT_SHIFT_KEY:
         case LEFT_SHIFT_KEY:
-            keyboard->selected = keyboard->shift_table;
+        case RIGHT_SHIFT_KEY:
+            bit = scan == LEFT_SHIFT_KEY ? 1 : 2;
+            shift_held = pressed ? (shift_held | bit) : (shift_held & ~bit);
             break;
-        
+
         case CAPS_LOCK_KEY:
-            keyboard->caps_lock ^= 1;
+            if (pressed)
+                caps_lock ^= 1;
             break;
-        
-        /* altri tasti  standard */
+
+        case LEFT_CONTROL_KEY:
+            control_held = pressed;
+            break;
     } else switch (scan) {
         case ALTGR_KEY:
-            keyboard->selected = keyboard->altgr_table;
+            altgr_held = pressed;
             break;
-        
-        /* altri tasti estesi */
-    }
 
-    if (scan & RELEASED_KEY)
-        keyboard->selected = keyboard->caps_lock ? 
-            keyboard->shift_table : keyboard->std_table;
+        case RIGHT_CONTROL_KEY:
+            control_held = pressed;
+            break;
+    }
 }
 
 static
-uint8_t keyboard_read_character(struct keyboard *keyboard, uint8_t scan)
+uint8_t keyboard_read_character(uint8_t scan)
 {
     if (scan & RELEASED_KEY)
         return 0;
-    
-    if (keyboard->selected)
-        return keyboard->selected[scan];
-    return keyboard->std_table[scan];
+    if (altgr_held)
+        return current_keymap->altgr_table[scan];
+    if (shift_held || caps_lock)
+        return current_keymap->shift_table[scan];
+
+    return current_keymap->std_table[scan];
 }
 
 void keyboard_handler(struct registers_t *regs)
@@ -181,14 +132,11 @@ void keyboard_handler(struct registers_t *regs)
     } else if ((!ext && IN_ARRAY(UNRELEASED(scan), CTRL_SCANCODES)) ||
         (ext && IN_ARRAY(UNRELEASED(scan), EXTENDED_CTRL_SCANCODES))) {
         /* special keys */
-    
-        if (UNRELEASED(scan) == LEFT_CONTROL_KEY || (ext && UNRELEASED(scan) == RIGHT_CONTROL_KEY))
-            control_held = !(scan & RELEASED_KEY);
-        keyboard_change_table(current_keyboard, scan, ext);
+        keyboard_modifier(scan, ext);
 
     } else {  /* normal keys */
 
-        chr = keyboard_read_character(current_keyboard, scan);
+        chr = keyboard_read_character(scan);
         if (control_held && ((chr >= 'a' && chr <= 'z') || (chr >= 'A' && chr <= 'Z')))
             chr &= 0x1F;
         if (chr) {
@@ -204,6 +152,7 @@ void keyboard_handler(struct registers_t *regs)
 void keyboard_start(size_t input_buffer_size)
 {
     queue_init(input_buffer, input_buffer_size);
+    keyboard_set_layout(KEYMAP_DEFAULT);
     set_int_handler(IRQ(1), keyboard_handler);
 }
 

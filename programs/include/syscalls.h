@@ -159,14 +159,17 @@ static force_inline void *krealloc_syscall(void *buff, size_t size)
 ///@param EBX: Program path, absolute or relative
 ///@param ECX: Pointer to the exit code (nullable)
 ///@param EDX: NULL terminated arguments, program name first (NULL means just path)
-static force_inline int exec_syscall(char *path, char **argv, int *exit_code) 
+///@param ESI: Descriptors the program gets as stdin, stdout, stderr (NULL inherits the caller's ones),
+///            EXEC_INVALID_ARGS if one isn't open
+static force_inline int exec_syscall(char *path, char **argv, int *stdio, int *exit_code) 
 {
     int status;
 
     __asm__ __volatile__ (
         "int $0x80 \n"
         : "=a"(status)
-        : "a"(7), "b"((uintptr_t)path), "c"((uintptr_t)exit_code), "d"((uintptr_t)argv)
+        : "a"(7), "b"((uintptr_t)path), "c"((uintptr_t)exit_code), "d"((uintptr_t)argv),
+          "S"((uintptr_t)stdio)
         : "memory"
     );
 
@@ -494,6 +497,45 @@ static force_inline int blkinfo_syscall(int index, struct blkinfo *info)
         "int $0x80 \n"
         : "=a"(ret)
         : "a"(23), "b"(index), "c"((uintptr_t)info)
+        : "memory"
+    );
+
+    return ret;
+}
+
+/* PIPE SYSCALLS */
+
+///@brief Open an empty pipe: written at its end (up to 64 KiB), read from the start.
+///       Programs run one at a time, so the writer must finish before the reader starts.
+///@param EAX: Pipe syscall num (24), on return the file descriptor or an error
+static force_inline int pipe_syscall(void)
+{
+    int ret;
+
+    __asm__ __volatile__ (
+        "int $0x80 \n"
+        : "=a"(ret)
+        : "a"(24)
+        : "memory"
+    );
+
+    return ret;
+}
+
+///@brief Select the keyboard layout and/or get the current one
+///@param EAX: Keymap syscall num (25), on return the status (FILE_NOT_FOUND for an unknown layout,
+///            FILE_INVALID if the name doesn't fit in size)
+///@param EBX: Layout to select ("it", "us"), NULL to keep the current one
+///@param ECX: Buffer for the name of the current layout (nullable)
+///@param EDX: Buffer size, terminator included
+static force_inline int keymap_syscall(char *name, char *current, size_t size)
+{
+    int ret;
+
+    __asm__ __volatile__ (
+        "int $0x80 \n"
+        : "=a"(ret)
+        : "a"(25), "b"((uintptr_t)name), "c"((uintptr_t)current), "d"(size)
         : "memory"
     );
 

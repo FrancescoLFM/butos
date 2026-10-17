@@ -10,6 +10,10 @@ FLAGS += -I.
 CFLAGS = $(FLAGS)
 CFLAGS += -ffreestanding -nostdlib -fno-stack-protector -std=c99 -mgeneral-regs-only
 
+# Keyboard layout at boot (src/drivers/keymaps.h), changed at runtime by the keymap syscall
+KEYMAP ?= it
+CFLAGS += -DKEYMAP_DEFAULT='"$(KEYMAP)"'
+
 LDSCRIPT = butos.ld
 
 SOURCES_C = $(wildcard *.c cpu/*.c drivers/*.c fs/*.c libs/*.c fs/fat32/*.c)

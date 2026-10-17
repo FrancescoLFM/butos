@@ -3,6 +3,7 @@
 
 #include <fs/elf.h>
 #include <fs/path.h>
+#include <fs/fd.h>
 
 #define DEFAULT_STACK   1024
 #define DEFAULT_HEAP    1000000
@@ -42,6 +43,9 @@ struct process {
     uintptr_t paddr;
     /* Normalized absolute path, inherited from the parent: relative paths start from here */
     char cwd[PATH_MAX];
+    /* Descriptors of the fd table its standard streams refer to, inherited from the parent
+       unless redirected (the console streams for processes started by the kernel) */
+    int stdio[FD_STD_NUM];
 };
 
 typedef enum {
@@ -53,11 +57,13 @@ typedef enum {
 } proc_status_t;
 
 int process_init(fat_fs_t *root_fs);
-/* Runs the loaded elf as main(argc, argv), argv must be in kernel memory */
-int process_exec(elf_t *elf, int argc, char **argv, int *exit_code);
+/* Runs the loaded elf as main(argc, argv), argv must be in kernel memory.
+   stdio are fd table indexes (see fd_target) for its standard streams, NULL inherits the caller's */
+int process_exec(elf_t *elf, int argc, char **argv, const int *stdio, int *exit_code);
 /* Loads the executable at path from the root filesystem and runs it to completion,
-   argv is NULL terminated with the program name first (NULL means just path) */
-proc_status_t process_spawn(char *path, char **argv, int *exit_code);
+   argv is NULL terminated with the program name first (NULL means just path).
+   stdio are the caller's descriptors to use as stdin, stdout, stderr (NULL inherits them) */
+proc_status_t process_spawn(char *path, char **argv, const int *stdio, int *exit_code);
 /* Nesting depth of the running process, 0 when called from the kernel */
 int process_depth(void);
 /* Process at nesting depth (1 to process_depth()), NULL if there is none */

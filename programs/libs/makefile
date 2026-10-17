@@ -18,8 +18,10 @@ LIBRARY = libbutos.a
 .PHONY=all
 all: $(LIBRARY)
 
-# string.c includes the kernel source
+# Each source includes the kernel one
 string.o: ../../src/libs/string.c ../../src/libs/string.h
+atoi.o: ../../src/libs/atoi.c ../../src/libs/atoi.h
+ctype.o: ../../src/libs/ctype.c ../../src/libs/ctype.h
 
 .c.o:
 	$(CC) $(CFLAGS) -c $< -o $@
